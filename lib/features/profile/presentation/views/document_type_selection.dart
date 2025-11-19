@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/constants/assets.dart';
 import 'package:flutter_application_1/features/profile/presentation/views/capture_document.dart';
@@ -18,11 +17,7 @@ class _DocumentTypeSelectionState extends State<DocumentTypeSelection> {
       "icon": AppIcons.idCard,
       "apiValue": "BI",
     },
-    {
-      "type": "Passaporte",
-      "icon": AppIcons.passport,
-      "apiValue": "PASSAPORTE",
-    },
+    {"type": "Passaporte", "icon": AppIcons.passport, "apiValue": "PASSAPORTE"},
     {
       "type": "Carta de Condu\u00e7\u00e3o",
       "icon": AppIcons.licensePlate,
@@ -73,64 +68,62 @@ class _DocumentTypeSelectionState extends State<DocumentTypeSelection> {
           ),
           Column(
             children: docs
-                .map((doc) => InkWell(
-                      onTap: () {
-                        int index = docs.indexOf(doc);
-                        setState(() {
-                          if (selectedDocIndex != index) {
-                            selectedDocIndex = index;
-                          }
-                        });
-                      },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 100),
-                        padding: const EdgeInsets.all(16.0),
-                        margin: const EdgeInsets.symmetric(vertical: 8.0),
-                        decoration: BoxDecoration(
-                          border: Border.fromBorderSide(
-                            BorderSide(
-                              width: selectedDocIndex == docs.indexOf(doc)
-                                  ? 1.2
-                                  : 1,
-                              color: Colors.black45,
-                            ),
+                .map(
+                  (doc) => InkWell(
+                    onTap: () {
+                      int index = docs.indexOf(doc);
+                      setState(() {
+                        if (selectedDocIndex != index) {
+                          selectedDocIndex = index;
+                        }
+                      });
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 100),
+                      padding: const EdgeInsets.all(16.0),
+                      margin: const EdgeInsets.symmetric(vertical: 8.0),
+                      decoration: BoxDecoration(
+                        border: Border.fromBorderSide(
+                          BorderSide(
+                            width: selectedDocIndex == docs.indexOf(doc)
+                                ? 1.2
+                                : 1,
+                            color: Colors.black45,
                           ),
-                          borderRadius: BorderRadius.circular(8.0),
                         ),
-                        child: Row(
-                          children: [
-                            Image(
-                              image: AssetImage(
-                                doc["icon"]! as String,
-                              ),
-                              width: 30,
-                              height: 30,
-                            ),
-                            const SizedBox(
-                              width: 10,
-                            ),
-                            Text(doc["type"]! as String),
-                            const Spacer(),
-                            AnimatedContainer(
-                              duration: const Duration(milliseconds: 100),
-                              width: 18,
-                              height: 18,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.fromBorderSide(
-                                  BorderSide(
-                                    width: selectedDocIndex == docs.indexOf(doc)
-                                        ? 3
-                                        : 1,
-                                    color: const Color(0xFF5A5A5A),
-                                  ),
+                        borderRadius: BorderRadius.circular(8.0),
+                      ),
+                      child: Row(
+                        children: [
+                          Image(
+                            image: AssetImage(doc["icon"]!),
+                            width: 30,
+                            height: 30,
+                          ),
+                          const SizedBox(width: 10),
+                          Text(doc["type"]!),
+                          const Spacer(),
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 100),
+                            width: 18,
+                            height: 18,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.fromBorderSide(
+                                BorderSide(
+                                  width: selectedDocIndex == docs.indexOf(doc)
+                                      ? 3
+                                      : 1,
+                                  color: const Color(0xFF5A5A5A),
                                 ),
                               ),
-                            )
-                          ],
-                        ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ))
+                    ),
+                  ),
+                )
                 .toList(),
           ),
           const Spacer(),
@@ -140,7 +133,8 @@ class _DocumentTypeSelectionState extends State<DocumentTypeSelection> {
               // L\u00f3gica do bot\u00e3o atualizada
               onPressed: () {
                 // Pega o valor da API do documento selecionado
-                final String selectedApiValue = docs[selectedDocIndex]['apiValue']! as String;
+                final String selectedApiValue =
+                    docs[selectedDocIndex]['apiValue']! as String;
 
                 showModalBottomSheet(
                   isScrollControlled: true,
@@ -173,7 +167,7 @@ class _DocumentTypeSelectionState extends State<DocumentTypeSelection> {
                 ),
               ),
             ),
-          )
+          ),
         ],
       ),
     );

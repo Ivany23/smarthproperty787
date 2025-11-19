@@ -86,7 +86,10 @@ class _ProfileViewState extends State<ProfileView> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() {
-          _credits = (data['informacoes_creditos']['saldo_atual'] as num?)?.toDouble() ?? 0.0;
+          _credits =
+              (data['informacoes_creditos']['saldo_atual'] as num?)
+                  ?.toDouble() ??
+              0.0;
         });
       }
     } catch (e) {
@@ -214,7 +217,8 @@ class _ProfileViewState extends State<ProfileView> {
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (context) => const IdentityVerificationScreen(),
+                        builder: (context) =>
+                            const IdentityVerificationScreen(),
                       ),
                     );
                   },
@@ -261,8 +265,11 @@ class _ProfileViewState extends State<ProfileView> {
     );
   }
 
-  Widget _buildProfileIcon(
-      {required IconData icon, required String label, required VoidCallback onTap}) {
+  Widget _buildProfileIcon({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
     return InkWell(
       onTap: onTap,
       child: Column(

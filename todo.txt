@@ -1,0 +1,6 @@
+- [ ] Add bool _hasDocumentsUploaded = false; to ProfileViewState
+- [ ] Modify _checkAdvertiserStatus to call _loadDocumentStatus if advertiser
+- [ ] Add _loadDocumentStatus method to check documents via API
+- [ ] Update _buildProfileIcon to change color for verification icon based on _hasDocumentsUploaded
+- [ ] Stage the changes
+- [ ] Commit with the provided message

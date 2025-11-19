@@ -1,0 +1,25 @@
+{
+  "folders": [
+    {
+      "name": "Flutter App",
+      "path": "."
+    },
+    {
+      "name": "Backend",
+      "path": "backend"
+    }
+  ],
+  "settings": {
+    "java.project.sourcePaths": [
+      "src/main/java"
+    ],
+    "java.project.outputPath": "target/classes",
+    "java.project.referencedLibraries": [
+      "target/dependency/*"
+    ],
+    "maven.pomFile": "pom.xml",
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "java.imports.gradle.enabled": false,
+    "java.imports.maven.enabled": true
+  }
+}

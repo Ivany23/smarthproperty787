@@ -54,9 +54,19 @@ flutter run
 
 ## 📊 **ENDPOINTS PRINCIPAIS**
 
-### **Authentication:**
-- `POST /api/registro` - Registrar novo usuário
-- `POST /api/login` - Login
+### **Authentication - Funcionalidades Completas de Login:**
+- `POST /api/auth/register` - Registrar novo usuário (visitante)
+  - Campos: nomeCompleto, email, telefone, senha
+  - Gera código de verificação (8 caracteres aleatórios)
+  - Retorna: id do visitante e código de verificação
+- `POST /api/auth/verify-code` - Verificar código de email
+  - Campos: visitanteId, codigo
+  - Ao confirmar, conta fica ATIVA
+- `POST /api/auth/login` - Login de usuário
+  - Campos: email, senha
+  - Retorna: id, nome, se é anunciante, id anunciante se aplicável
+- `POST /api/auth/verify-profile` - Verificar perfil completo
+- `POST /api/auth/become-advertiser` - Tornar-se anunciante
 
 ### **Imóveis:**
 - `POST /api/imovel/criar` - Criar imóvel (com foto opcional)

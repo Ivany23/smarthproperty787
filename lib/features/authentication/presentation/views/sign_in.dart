@@ -59,30 +59,82 @@ class _SignInScreenState extends State<SignInScreen> {
         }),
       );
 
+      print('Response received - status code: ${response.statusCode}');
+      print('Response body: ${response.body}');
       if (!mounted) return;
       Navigator.pop(context);
 
+      print('Checking if status code is 200...');
       if (response.statusCode == 200) {
+        print('✅ Login successful! Processing response data...');
         final Map<String, dynamic> data = jsonDecode(response.body);
+        print('Parsed login data: $data');
+        final int visitanteId = data['visitanteId'];
+
+        // Fetch visitor details to get name
+        print(
+          '📞 Fetching visitor details from /api/visitante/buscar/$visitanteId',
+        );
+        final visitorResponse = await http.get(
+          Uri.parse('http://localhost:8080/api/visitante/buscar/$visitanteId'),
+        );
+
+        String visitorName = 'Visitante';
+        if (visitorResponse.statusCode == 200) {
+          final visitorData = jsonDecode(visitorResponse.body);
+          print('Visitor data received: $visitorData');
+          visitorName = visitorData['nomeCompleto'] ?? 'Visitante';
+        }
+
+        // Check if visitor is an advertiser
+        print(
+          '📞 Checking if visitor is advertiser from /api/anunciante/visitante/$visitanteId',
+        );
+        final advertiserResponse = await http.get(
+          Uri.parse(
+            'http://localhost:8080/api/anunciante/visitante/$visitanteId',
+          ),
+        );
+
+        bool isAdvertiser = false;
+        int? anuncianteId;
+        if (advertiserResponse.statusCode == 200) {
+          final advertiserData = jsonDecode(advertiserResponse.body);
+          print('Advertiser data received: $advertiserData');
+          isAdvertiser = true;
+          anuncianteId = advertiserData['id'];
+        } else {
+          print('Not an advertiser (status: ${advertiserResponse.statusCode})');
+        }
+
+        // Save all data to SharedPreferences
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setInt('visitorId', data['visitanteId']);
-        await prefs.setString('visitorName', data['visitorName']);
-        await prefs.setBool('isAdvertiser', data['isAdvertiser']);
-        if (data['isAdvertiser']) {
-          await prefs.setInt('anuncianteId', data['anuncianteId']);
+        await prefs.setInt('visitorId', visitanteId);
+        await prefs.setString('visitorName', visitorName);
+        await prefs.setBool('isAdvertiser', isAdvertiser);
+        if (isAdvertiser && anuncianteId != null) {
+          await prefs.setInt('anuncianteId', anuncianteId);
         }
         await prefs.setBool('isLoggedIn', true);
+        print('✅ Saved to SharedPreferences:');
+        print('   - visitorId: $visitanteId');
+        print('   - visitorName: $visitorName');
+        print('   - isAdvertiser: $isAdvertiser');
+        if (isAdvertiser) print('   - anuncianteId: $anuncianteId');
+
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Login realizado com sucesso!'),
+          SnackBar(
+            content: Text('Bem-vindo, $visitorName!'),
             backgroundColor: Colors.green,
           ),
         );
         if (!mounted) return;
+        print('🚀 Navigating to Wrapper...');
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const Wrapper()),
         );
+        print('Navigation to Wrapper completed');
       } else {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -109,100 +161,134 @@ class _SignInScreenState extends State<SignInScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBodyBehindAppBar: true,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(5.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    TextButton(
-                      onPressed: () {},
-                      child: Text(
-                        "Entrar",
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 30),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                child: CustomInput(
-                  controller: _emailController,
-                  iconUri: AppIcons.email,
-                  label: "Email",
-                  placeholder: "Digite seu email",
-                  isPassword: false,
-                ),
-              ),
-              const SizedBox(height: 20),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                child: CustomInput(
-                  controller: _passwordController,
-                  iconUri: AppIcons.lock,
-                  label: "Senha",
-                  placeholder: "Digite sua senha",
-                  isPassword: true,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.primary.withOpacity(0.05),
+              Colors.white,
+              AppColors.primary.withOpacity(0.05),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                      child: CustomButton(
-                        onPressed: _signIn,
-                        backgroundColor: const Color(0XFF333333),
-                        text: 'Entrar',
+                  const SizedBox(height: 40),
+                  // Título moderno
+                  Text(
+                    "Bem-vindo",
+                    style: TextStyle(
+                      fontSize: 36,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                      letterSpacing: -1,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Entre na sua conta",
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                  const SizedBox(height: 50),
+                  // Card com sombra para os inputs
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      children: [
+                        CustomInput(
+                          controller: _emailController,
+                          iconUri: AppIcons.email,
+                          label: "Email",
+                          placeholder: "Digite seu email",
+                          isPassword: false,
+                        ),
+                        const SizedBox(height: 20),
+                        CustomInput(
+                          controller: _passwordController,
+                          iconUri: AppIcons.lock,
+                          label: "Senha",
+                          placeholder: "Digite sua senha",
+                          isPassword: true,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  // Botão moderno com gradiente
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0XFF333333).withOpacity(0.3),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: CustomButton(
+                      onPressed: _signIn,
+                      backgroundColor: const Color(0XFF333333),
+                      text: 'Entrar',
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  // Link para cadastro
+                  Center(
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const SignUpScreen(),
+                          ),
+                        );
+                      },
+                      child: RichText(
+                        text: TextSpan(
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: Colors.grey[700],
+                          ),
+                          children: [
+                            const TextSpan(text: "Não tem uma conta? "),
+                            TextSpan(
+                              text: "Cadastre-se",
+                              style: TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ],
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16.0,
-                  vertical: 16 * 2,
-                ),
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const SignUpScreen(),
-                      ),
-                    );
-                  },
-                  child: Wrap(
-                    alignment: WrapAlignment.center,
-                    children: [
-                      Text(
-                        "Não tem uma conta? ",
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: AppColors.general,
-                        ),
-                      ),
-                      Text(
-                        "Cadastre-se",
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Colors.black,
-                          decoration: TextDecoration.underline,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),

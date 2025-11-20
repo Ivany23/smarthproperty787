@@ -34,7 +34,10 @@ class _ExploreViewState extends State<ExploreView> {
     return properties.map((property) {
       return Marker(
         markerId: MarkerId(property.id),
-        position: property.position,
+        position: LatLng(
+          property.position.latitude,
+          property.position.longitude,
+        ),
         icon: BitmapDescriptor.defaultMarkerWithHue(
           _getHueForPropertyType(property.type),
         ), // Blue hue
@@ -136,7 +139,10 @@ class _ExploreViewState extends State<ExploreView> {
         Marker(
           markerId: MarkerId(property.id),
           icon: customIcon,
-          position: property.position,
+          position: LatLng(
+            property.position.latitude,
+            property.position.longitude,
+          ),
           onTap: () {
             setState(() {
               _selectedProperty = property;
@@ -201,10 +207,7 @@ class _ExploreViewState extends State<ExploreView> {
                     const SizedBox(width: 2),
                     Text(
                       property.location,
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontSize: 10,
-                      ),
+                      style: const TextStyle(color: Colors.black, fontSize: 10),
                     ),
                   ],
                 ),

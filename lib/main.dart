@@ -1,14 +1,11 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_application_1/wrapper.dart';
 import 'package:flutter_application_1/features/authentication/presentation/views/sign_in.dart';
 
 import 'core/constants/colors.dart';
-import 'my_http_overrides.dart';
 
 void main() {
-  HttpOverrides.global = MyHttpOverrides();
   runApp(const MyApp());
 }
 

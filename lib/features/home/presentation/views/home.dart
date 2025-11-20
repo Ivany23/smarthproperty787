@@ -15,30 +15,15 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  late PageController controller;
-
-  @override
-  void initState() {
-    super.initState();
-    controller = PageController(initialPage: 0);
-    controller.addListener(() {
-      setState(() {
-        currentIndex = controller.page!.toInt();
-      });
-    });
-  }
-
   List<Widget> homeScreens = const [
     OffersView(),
-    // ExploreView(),
     ChatView(),
     FavoriteView(),
-    ProfileView()
+    ProfileView(),
   ];
   int currentIndex = 0;
 
   void _onFabPressed() {
-    // Handle FAB press
     showModalBottomSheet(
       isScrollControlled: true,
       context: context,
@@ -56,21 +41,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    print('HomeScreen building - currentIndex: $currentIndex');
     return Scaffold(
-      body: PageView(
-        controller: controller,
-        children: homeScreens,
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _onFabPressed,
-        backgroundColor: AppColors.primary,
-        elevation: 4,
-        child: const Icon(
-          Icons.add,
-          color: Colors.white,
-          size: 30,
-        ),
-      ),
+      body: IndexedStack(index: currentIndex, children: homeScreens),
+      floatingActionButton: currentIndex == 0
+          ? FloatingActionButton(
+              onPressed: _onFabPressed,
+              backgroundColor: AppColors.primary,
+              elevation: 4,
+              child: const Icon(Icons.add, color: Colors.white, size: 30),
+            )
+          : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
@@ -81,13 +62,11 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildNavItem(
-                 CupertinoIcons.house_alt,  "Ofertas", 0),
-              // _buildNavItem(Icons.search, "Explorar", 0),
+              _buildNavItem(CupertinoIcons.house_alt, "Ofertas", 0),
               _buildNavItem(CupertinoIcons.chat_bubble, "Mensagem", 1),
               const SizedBox(width: 40), // Space for FAB
-              _buildNavItem(CupertinoIcons.heart, "Favoritos", 3),
-              _buildNavItem(CupertinoIcons.person, "Meu Perfil", 4),
+              _buildNavItem(CupertinoIcons.heart, "Favoritos", 2),
+              _buildNavItem(CupertinoIcons.person, "Meu Perfil", 3),
             ],
           ),
         ),
@@ -98,11 +77,11 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildNavItem(IconData icon, String label, int index) {
     return Expanded(
       child: InkWell(
-        onTap: () => controller.animateToPage(
-          index,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.ease,
-        ),
+        onTap: () {
+          setState(() {
+            currentIndex = index;
+          });
+        },
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -115,7 +94,9 @@ class _HomeScreenState extends State<HomeScreen> {
               label,
               style: TextStyle(
                 fontSize: 10,
-                color: currentIndex == index ? AppColors.primary : Colors.black87,
+                color: currentIndex == index
+                    ? AppColors.primary
+                    : Colors.black87,
               ),
             ),
           ],

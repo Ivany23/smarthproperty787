@@ -10,7 +10,6 @@ class DocumentTypeSelection extends StatefulWidget {
 }
 
 class _DocumentTypeSelectionState extends State<DocumentTypeSelection> {
-  // Adicionada a chave 'apiValue' que corresponde ao Enum no backend
   final docs = const [
     {
       "type": "Bilhete de Identidade",
@@ -19,7 +18,7 @@ class _DocumentTypeSelectionState extends State<DocumentTypeSelection> {
     },
     {"type": "Passaporte", "icon": AppIcons.passport, "apiValue": "PASSAPORTE"},
     {
-      "type": "Carta de Condu\u00e7\u00e3o",
+      "type": "Carta de Condução",
       "icon": AppIcons.licensePlate,
       "apiValue": "CARTA_DE_CONDUCAO",
     },
@@ -63,7 +62,7 @@ class _DocumentTypeSelectionState extends State<DocumentTypeSelection> {
             ],
           ),
           Text(
-            "Escolha o documento de verifica\u00e7\u00e3o",
+            "Escolha o documento de verificação",
             style: const TextStyle(fontSize: 14),
           ),
           Column(
@@ -130,11 +129,8 @@ class _DocumentTypeSelectionState extends State<DocumentTypeSelection> {
           Padding(
             padding: const EdgeInsets.only(top: 20),
             child: ElevatedButton(
-              // L\u00f3gica do bot\u00e3o atualizada
               onPressed: () {
-                // Pega o valor da API do documento selecionado
-                final String selectedApiValue =
-                    docs[selectedDocIndex]['apiValue']! as String;
+                final selectedApiValue = docs[selectedDocIndex]['apiValue']!;
 
                 showModalBottomSheet(
                   isScrollControlled: true,
@@ -146,7 +142,6 @@ class _DocumentTypeSelectionState extends State<DocumentTypeSelection> {
                     ),
                   ),
                   builder: (context) {
-                    // Passa o valor para o construtor do CaptureDocument
                     return CaptureDocument(tipoDocumento: selectedApiValue);
                   },
                 );

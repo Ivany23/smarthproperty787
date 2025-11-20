@@ -15,7 +15,7 @@ class AppIcons {
   static const String pool = 'assets/icons/swimming-pool.png';
   static const String home = 'assets/icons/home.png';
   static const String heart = 'assets/icons/heart.png';
-  static const String profile = 'assets/icons/profile.png';
+  static const String profile = 'assets/icons/user.png';
   static const String notification = 'assets/icons/notification.png';
   static const String warningTwo = 'assets/icons/warning2.png';
   static const String coinOne = 'assets/icons/coin1.png';
@@ -28,7 +28,6 @@ class AppIcons {
   static const String passport = 'assets/icons/passport.png';
   static const String licensePlate = 'assets/icons/license_plate.png';
   static const String locationPin = 'assets/icons/location_pin.png';
-
 }
 
 class AppImages {
@@ -44,7 +43,7 @@ class AppImages {
   static const String registered = 'assets/images/registered.png';
   static const String goal = 'assets/images/goal.png';
   static const String beachHouse2 = 'assets/images/beach_house_two.png';
-  static const String  beachHouse3 = 'assets/images/beach_house_three.png';
+  static const String beachHouse3 = 'assets/images/beach_house_three.png';
 }
 
 class OnboardingContent {
@@ -60,14 +59,14 @@ class OnboardingContent {
       'id': '2',
       'title': 'Venda propriedades com um clique',
       'description':
-      'Encontre a propriedade perfeita para ti e faca dinheiro vendedo.',
+          'Encontre a propriedade perfeita para ti e faca dinheiro vendedo.',
       'image': AppImages.onBoardingTwo,
     },
     {
       'id': '3',
       'title': 'Mais de 80k propriedades na plataforma',
       'description':
-      'Encontre a propriedade perfeita para ti e faca dinheiro vendedo.',
+          'Encontre a propriedade perfeita para ti e faca dinheiro vendedo.',
       'image': AppImages.onBoardingThree,
     },
   ];

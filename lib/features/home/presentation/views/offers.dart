@@ -5,7 +5,7 @@ import 'package:flutter_application_1/core/constants/assets.dart';
 import 'package:flutter_application_1/core/constants/colors.dart';
 import 'package:flutter_application_1/core/shared/widgets/custom_input.dart';
 import 'package:flutter_application_1/core/shared/widgets/property_attribure.dart';
-import 'package:flutter_application_1/features/explore/presentation/views/explore.dart';
+
 import 'package:flutter_application_1/features/home/data/models/property.dart';
 import 'package:flutter_application_1/features/home/presentation/views/offers_details.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -33,6 +33,7 @@ class _OffersViewState extends State<OffersView> {
   Future<void> _loadVisitorData() async {
     final prefs = await SharedPreferences.getInstance();
     final name = prefs.getString('visitorName') ?? 'Visitante';
+    if (!mounted) return;
     setState(() {
       welcomeMessage = 'Olá, $name!';
       avatarLetter = name.isNotEmpty ? name[0].toUpperCase() : 'V';
@@ -41,6 +42,7 @@ class _OffersViewState extends State<OffersView> {
 
   @override
   Widget build(BuildContext context) {
+    print('OffersView building - welcomeMessage: $welcomeMessage');
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: kToolbarHeight + 10,
@@ -65,10 +67,10 @@ class _OffersViewState extends State<OffersView> {
         actions: [
           InkWell(
             onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ExploreView()),
-              );
+              // Navigator.push(
+              //   context,
+              //   MaterialPageRoute(builder: (context) => const ExploreView()),
+              // );
             },
             child: const Icon(
               Icons.location_searching_sharp,

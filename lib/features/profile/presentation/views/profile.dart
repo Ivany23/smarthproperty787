@@ -25,6 +25,7 @@ class _ProfileViewState extends State<ProfileView> {
   double _credits = 0.0;
   bool _isAdvertiser = false;
   bool _isVerified = false;
+  bool _hasDocuments = false;
 
   @override
   void initState() {
@@ -62,6 +63,7 @@ class _ProfileViewState extends State<ProfileView> {
           _isVerified = data['verificado'] ?? false;
         });
         await _loadCredits(anuncianteId);
+        await _checkDocuments(anuncianteId);
       } else if (response.statusCode == 404) {
         setState(() {
           _isAdvertiser = false;
@@ -72,6 +74,27 @@ class _ProfileViewState extends State<ProfileView> {
       setState(() {
         _isAdvertiser = false;
       });
+    }
+  }
+
+  Future<void> _checkDocuments(int anuncianteId) async {
+    try {
+      final response = await http.get(
+        Uri.parse(
+          'http://localhost:8080/api/documentos-verificacao/anunciante/$anuncianteId',
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        final docs = jsonDecode(response.body) as List;
+        setState(() {
+          _hasDocuments = docs.isNotEmpty;
+          _isVerified =
+              docs.isNotEmpty && docs.any((doc) => doc['verificado'] == true);
+        });
+      }
+    } catch (e) {
+      print('Erro ao verificar documentos: $e');
     }
   }
 
@@ -211,22 +234,46 @@ class _ProfileViewState extends State<ProfileView> {
                       );
                     },
                   ),
-                _buildProfileIcon(
-                  icon: Icons.verified_user,
-                  label: 'Verificação de Identidade',
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            const IdentityVerificationScreen(),
+                _hasDocuments
+                    ? InkWell(
+                        onTap: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const IdentityVerificationScreen(),
+                            ),
+                          );
+                          if (_isAdvertiser) {
+                            _checkDocuments(_anuncianteId);
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          child: Icon(
+                            _isVerified ? Icons.verified : Icons.pending,
+                            size: 40,
+                            color: _isVerified ? Colors.green : Colors.orange,
+                          ),
+                        ),
+                      )
+                    : _buildProfileIcon(
+                        icon: Icons.verified_user,
+                        label: 'Verificar Identidade',
+                        onTap: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const IdentityVerificationScreen(),
+                            ),
+                          );
+                          if (_isAdvertiser) {
+                            _checkDocuments(_anuncianteId);
+                          }
+                        },
                       ),
-                    );
-                  },
-                ),
               ],
             ),
             const SizedBox(height: 40),
-            // Logout Button
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               child: ElevatedButton.icon(

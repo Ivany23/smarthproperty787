@@ -1,9 +1,8 @@
-
-import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class CaptureDocument extends StatefulWidget {
   final String tipoDocumento;
@@ -28,17 +27,23 @@ class _CaptureDocumentState extends State<CaptureDocument> {
   Future<void> _initializeCamera() async {
     final cameras = await availableCameras();
     if (cameras.isEmpty) {
-      debugPrint("Nenhuma c\u00e2mera dispon\u00edvel.");
+      debugPrint("Nenhuma câmera disponível.");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Nenhuma c\u00e2mera encontrada neste dispositivo.")),
+          const SnackBar(
+            content: Text("Nenhuma câmera encontrada neste dispositivo."),
+          ),
         );
       }
       return;
     }
     final firstCamera = cameras.first;
 
-    _controller = CameraController(firstCamera, ResolutionPreset.high, enableAudio: false);
+    _controller = CameraController(
+      firstCamera,
+      ResolutionPreset.high,
+      enableAudio: false,
+    );
 
     try {
       await _controller!.initialize();
@@ -46,13 +51,13 @@ class _CaptureDocumentState extends State<CaptureDocument> {
         setState(() => _isCameraInitialized = true);
       }
     } catch (e) {
-      debugPrint("Erro ao inicializar a c\u00e2mera: $e");
+      debugPrint("Erro ao inicializar a câmera: $e");
     }
   }
 
   Future<void> _takePictureAndUpload() async {
     if (!_controller!.value.isInitialized) {
-      debugPrint("Controlador da c\u00e2mera n\u00e3o inicializado.");
+      debugPrint("Controlador da câmera não inicializado.");
       return;
     }
     if (_isUploading) return;
@@ -65,7 +70,6 @@ class _CaptureDocumentState extends State<CaptureDocument> {
       final XFile imageFile = await _controller!.takePicture();
 
       await _uploadDocument(imageFile);
-
     } catch (e) {
       debugPrint("Erro ao capturar ou enviar o documento: $e");
       if (mounted) {
@@ -84,25 +88,48 @@ class _CaptureDocumentState extends State<CaptureDocument> {
 
   Future<void> _uploadDocument(XFile imageFile) async {
     final prefs = await SharedPreferences.getInstance();
-    final anuncianteId = prefs.getInt('visitorId'); // Assumindo que 'visitorId' \u00e9 o ID do anunciante
+    int? anuncianteId = prefs.getInt('anuncianteId');
+    
+    if (anuncianteId == null) {
+      final visitorId = prefs.getInt('visitorId');
+      if (visitorId != null) {
+        try {
+          final response = await http.get(
+            Uri.parse('http://localhost:8080/api/anunciante/visitante/$visitorId'),
+          );
+          if (response.statusCode == 200) {
+            final data = jsonDecode(response.body);
+            anuncianteId = data['id'];
+          }
+        } catch (e) {
+          print('Erro ao buscar anuncianteId: $e');
+        }
+      }
+    }
 
     if (anuncianteId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Erro: ID do anunciante n\u00e3o encontrado. Fa\u00e7a login novamente.")),
+        const SnackBar(
+          content: Text(
+            "Erro: ID do anunciante não encontrado. Faça login novamente.",
+          ),
+        ),
       );
       return;
     }
 
-    const String apiUrl = "http://localhost:8080/api/documentos-verificacao/criar";
+    const String apiUrl =
+        "http://localhost:8080/api/documentos-verificacao/criar";
     var request = http.MultipartRequest('POST', Uri.parse(apiUrl));
 
     request.fields['anuncianteId'] = anuncianteId.toString();
     request.fields['tipoDocumento'] = widget.tipoDocumento;
 
     request.files.add(
-      await http.MultipartFile.fromPath(
+      http.MultipartFile.fromBytes(
         'documento',
-        imageFile.path,
+        await imageFile.readAsBytes(),
+        filename: imageFile.name,
       ),
     );
 
@@ -116,23 +143,25 @@ class _CaptureDocumentState extends State<CaptureDocument> {
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.pop(context); // Volta para a tela anterior
+        Navigator.pop(context);
       } else {
         final responseBody = await response.stream.bytesToString();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Falha no upload. C\u00f3digo: ${response.statusCode}, Resposta: $responseBody'),
+            content: Text(
+              'Falha no upload. Código: ${response.statusCode}, Resposta: $responseBody',
+            ),
             backgroundColor: Colors.red,
           ),
         );
       }
     } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Ocorreu um erro de rede: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ocorreu um erro de rede: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -201,7 +230,9 @@ class _CaptureDocumentState extends State<CaptureDocument> {
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                       child: ElevatedButton(
-                        onPressed: (_isCameraInitialized && !_isUploading) ? _takePictureAndUpload : null,
+                        onPressed: (_isCameraInitialized && !_isUploading)
+                            ? _takePictureAndUpload
+                            : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
                           minimumSize: const Size(double.maxFinite, 50),
@@ -210,7 +241,9 @@ class _CaptureDocumentState extends State<CaptureDocument> {
                           ),
                         ),
                         child: _isUploading
-                            ? const CircularProgressIndicator(color: Colors.black)
+                            ? const CircularProgressIndicator(
+                                color: Colors.black,
+                              )
                             : const Text(
                                 "Capturar e Enviar",
                                 style: TextStyle(

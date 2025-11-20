@@ -21,8 +21,12 @@ public class Anuncio {
     @Column(name = "id_anuncio")
     private Long idAnuncio;
 
-    @Column(name = "id_imovel", nullable = false)
+    @Column(name = "id_imovel", nullable = false, insertable = false, updatable = false)
     private Long idImovel;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "id_imovel", referencedColumnName = "id_imovel")
+    private Imovel imovel;
 
     @Column(name = "data_publicacao", nullable = false)
     private LocalDateTime dataPublicacao = LocalDateTime.now();

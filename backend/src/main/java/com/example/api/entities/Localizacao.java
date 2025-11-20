@@ -1,8 +1,12 @@
 package com.example.api.entities;
+
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+
 @Entity
-@Table(name = "localizacao")
+@Table(name = "localizacao", uniqueConstraints = {
+        @UniqueConstraint(columnNames = "id_imovel", name = "uk_localizacao_imovel")
+})
 public class Localizacao {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

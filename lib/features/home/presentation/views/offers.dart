@@ -1,14 +1,13 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/constants/assets.dart';
 import 'package:flutter_application_1/core/constants/colors.dart';
 import 'package:flutter_application_1/core/shared/widgets/custom_input.dart';
-import 'package:flutter_application_1/core/shared/widgets/property_attribure.dart';
-
-import 'package:flutter_application_1/features/home/data/models/property.dart';
 import 'package:flutter_application_1/features/home/presentation/views/offers_details.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 
 class OffersView extends StatefulWidget {
   const OffersView({super.key});
@@ -20,6 +19,8 @@ class OffersView extends StatefulWidget {
 class _OffersViewState extends State<OffersView> {
   String welcomeMessage = "Olá!";
   String avatarLetter = "D";
+  List<dynamic> _anuncios = [];
+  bool _isLoading = true;
 
   late final TextEditingController searchController;
 
@@ -28,6 +29,7 @@ class _OffersViewState extends State<OffersView> {
     super.initState();
     searchController = TextEditingController();
     _loadVisitorData();
+    _loadAnuncios();
   }
 
   Future<void> _loadVisitorData() async {
@@ -40,9 +42,38 @@ class _OffersViewState extends State<OffersView> {
     });
   }
 
+  Future<void> _loadAnuncios() async {
+    try {
+      final response = await http.get(
+        Uri.parse('http://localhost:8080/api/imovel/listar'),
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        print('Imóveis carregados: ${data.length}');
+        if (data.isNotEmpty) {
+          print('Primeiro imóvel: ${data[0]}');
+        }
+        setState(() {
+          _anuncios = data;
+          _isLoading = false;
+        });
+      } else {
+        print('Erro ao carregar imóveis: ${response.statusCode}');
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Erro ao carregar imóveis: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    print('OffersView building - welcomeMessage: $welcomeMessage');
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: kToolbarHeight + 10,
@@ -66,12 +97,7 @@ class _OffersViewState extends State<OffersView> {
         ),
         actions: [
           InkWell(
-            onTap: () {
-              // Navigator.push(
-              //   context,
-              //   MaterialPageRoute(builder: (context) => const ExploreView()),
-              // );
-            },
+            onTap: () {},
             child: const Icon(
               Icons.location_searching_sharp,
               color: Colors.black45,
@@ -130,15 +156,28 @@ class _OffersViewState extends State<OffersView> {
                   }).toList(),
                 ),
                 const SizedBox(height: 30),
-                OfferViewPropertyList(
-                  title: "Destaques",
-                  properties: properties,
-                ),
-                OfferViewPropertyList(
-                  title: "Recomendações",
-                  properties: properties,
-                  onDemand: false,
-                ),
+                if (_isLoading)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(40.0),
+                      child: CircularProgressIndicator(),
+                    ),
+                  )
+                else if (_anuncios.isEmpty)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(40.0),
+                      child: Text(
+                        'Nenhum imóvel disponível no momento',
+                        style: TextStyle(fontSize: 16, color: Colors.grey),
+                      ),
+                    ),
+                  )
+                else
+                  OfferViewPropertyList(
+                    title: "Imóveis Disponíveis",
+                    anuncios: _anuncios,
+                  ),
               ],
             ),
           ),
@@ -152,244 +191,333 @@ class OfferViewPropertyList extends StatefulWidget {
   const OfferViewPropertyList({
     super.key,
     required this.title,
-    required this.properties,
-    this.onDemand = true,
+    required this.anuncios,
   });
 
   final String title;
-  final List<Property> properties;
-  final bool onDemand;
+  final List<dynamic> anuncios;
 
   @override
   State<OfferViewPropertyList> createState() => _OfferViewPropertyListState();
 }
 
 class _OfferViewPropertyListState extends State<OfferViewPropertyList> {
-  bool isFavorite = false;
-
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Row(
-          children: [
-            Text(
-              widget.title,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-            ),
-            const Spacer(),
-            const Text("Ver mais", style: TextStyle(fontSize: 14)),
-            const Icon(Icons.chevron_right),
-          ],
+        Text(
+          widget.title,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 10),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: widget.properties.map((element) {
-              return GestureDetector(
-                onTap: () {
-                  showModalBottomSheet(
-                    isScrollControlled: true,
-                    context: context,
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(30),
-                        topRight: Radius.circular(30),
-                      ),
-                    ),
-                    builder: (context) {
-                      return OfferDetails(
-                        title: element.title,
-                        location: element.location,
-                        price: element.price.toDouble(),
-                        bedrooms: 1,
-                        bathrooms: 3,
-                        parking: true,
-                        description: 'lorem',
-                        assetImagePath: 'assets/images/beach_house.png',
-                      );
-                    },
-                  );
-                },
-                child: Container(
-                  margin: const EdgeInsets.only(
-                    left: 10,
-                    right: 10,
-                    bottom: 16,
-                    top: 5,
+        Column(
+          children: widget.anuncios
+              .where((imovel) {
+                return imovel != null;
+              })
+              .map((imovel) {
+                final imovelId = imovel['id'];
+                final imageUrl = imovel['imagemPrincipalUrl'] ?? '';
+                final titulo = imovel['titulo'] ?? 'Sem título';
+                final descricao = imovel['descricao'] ?? '';
+
+                var preco = imovel['precoMzn'] ?? 0;
+                var area = imovel['area'] ?? 0;
+
+                final finalidade = imovel['finalidade'] ?? 'VENDA';
+                final categoria = imovel['categoria'] ?? 'Casa';
+
+                double precoDouble = 0.0;
+                if (preco is int) {
+                  precoDouble = preco.toDouble();
+                } else if (preco is double) {
+                  precoDouble = preco;
+                } else if (preco is num) {
+                  precoDouble = preco.toDouble();
+                }
+
+                double areaDouble = 0.0;
+                if (area is int) {
+                  areaDouble = area.toDouble();
+                } else if (area is double) {
+                  areaDouble = area;
+                } else if (area is num) {
+                  areaDouble = area.toDouble();
+                }
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 16.0),
+                  child: PropertyCard(
+                    imovelId: imovelId is int ? imovelId : null,
+                    imageUrl: imageUrl,
+                    titulo: titulo,
+                    descricao: descricao,
+                    preco: precoDouble,
+                    area: areaDouble,
+                    finalidade: finalidade,
+                    categoria: categoria,
                   ),
-                  padding: const EdgeInsets.only(
-                    bottom: 10,
-                    left: 4,
-                    right: 4,
-                    top: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: const [
-                      BoxShadow(
-                        offset: Offset(0, 4),
-                        blurRadius: 10,
-                        color: Colors.black12,
-                      ),
-                      BoxShadow(
-                        offset: Offset(0, 0),
-                        blurRadius: 0,
-                        spreadRadius: 0.5,
-                        color: Colors.black12,
-                      ),
-                    ],
-                  ),
-                  constraints: const BoxConstraints(minHeight: 230),
-                  width: 220,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Stack(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image(
-                              image: AssetImage(
-                                element.type == PropertyType.land
-                                    ? AppImages.land
-                                    : AppImages.beachHouse,
-                              ),
-                              fit: BoxFit.fitWidth,
+                );
+              })
+              .toList(),
+        ),
+      ],
+    );
+  }
+}
+
+class PropertyCard extends StatefulWidget {
+  final int? imovelId;
+  final String imageUrl;
+  final String titulo;
+  final String descricao;
+  final double preco;
+  final double area;
+  final String finalidade;
+  final String categoria;
+
+  const PropertyCard({
+    super.key,
+    this.imovelId,
+    required this.imageUrl,
+    required this.titulo,
+    required this.descricao,
+    required this.preco,
+    required this.area,
+    required this.finalidade,
+    required this.categoria,
+  });
+
+  @override
+  State<PropertyCard> createState() => _PropertyCardState();
+}
+
+class _PropertyCardState extends State<PropertyCard> {
+  bool isFavorite = false;
+
+  String _formatPrice(double price) {
+    return 'MZN ${price.toStringAsFixed(2).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}';
+  }
+
+  IconData _getCategoryIcon() {
+    switch (widget.categoria.toLowerCase()) {
+      case 'apartamento':
+        return Icons.apartment;
+      case 'casa':
+        return Icons.home;
+      case 'terreno':
+        return Icons.landscape;
+      case 'comercial':
+        return Icons.store;
+      default:
+        return Icons.home;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        showModalBottomSheet(
+          isScrollControlled: true,
+          context: context,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(30),
+              topRight: Radius.circular(30),
+            ),
+          ),
+          builder: (context) {
+            return OfferDetails(
+              imovelId: widget.imovelId,
+              titulo: widget.titulo,
+              descricao: widget.descricao,
+              preco: widget.preco,
+              area: widget.area,
+              finalidade: widget.finalidade,
+              categoria: widget.categoria,
+              imageUrl: widget.imageUrl,
+            );
+          },
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(left: 10, right: 10, bottom: 16, top: 5),
+        padding: const EdgeInsets.only(bottom: 10, left: 4, right: 4, top: 4),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: const [
+            BoxShadow(
+              offset: Offset(0, 4),
+              blurRadius: 10,
+              color: Colors.black12,
+            ),
+            BoxShadow(
+              offset: Offset(0, 0),
+              blurRadius: 0,
+              spreadRadius: 0.5,
+              color: Colors.black12,
+            ),
+          ],
+        ),
+        constraints: const BoxConstraints(minHeight: 230),
+        width: double.infinity,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: widget.imageUrl.isNotEmpty
+                      ? Image.network(
+                          'http://localhost:8080${widget.imageUrl}',
+                          fit: BoxFit.cover,
+                          height: 118,
+                          width: double.maxFinite,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
                               height: 118,
                               width: double.maxFinite,
-                            ),
-                          ),
-                          Visibility(
-                            visible: widget.onDemand,
-                            child: const Positioned(
-                              left: 2,
-                              top: 10,
-                              child: Image(
-                                image: AssetImage(AppImages.trustBadge),
-                                width: 40,
+                              color: Colors.grey[300],
+                              child: Icon(
+                                _getCategoryIcon(),
+                                size: 50,
+                                color: Colors.grey,
                               ),
-                            ),
-                          ),
-                          StatefulBuilder(
-                            builder: (context, setState) {
-                              return Positioned(
-                                bottom: 12,
-                                right: 16,
-                                child: HeartCircleButton(
-                                  isFavorite: isFavorite,
-                                  onTap: () {
-                                    setState(() {
-                                      isFavorite = !isFavorite;
-                                    });
-                                  },
-                                ),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(
-                          top: 8,
-                          left: 8,
-                          right: 8,
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Container(
-                              width: 7,
-                              height: 7,
-                              decoration: const BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.green,
-                              ),
-                            ),
-                            const SizedBox(width: 2),
-                            Text(
-                              element.type == PropertyType.rent
-                                  ? "Para arrendar"
-                                  : "Terreno",
-                              style: const TextStyle(fontSize: 8),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8, right: 8),
-                        child: RichText(
-                          text: const TextSpan(
-                            children: [
-                              TextSpan(
-                                text: "MZN 125.000.00",
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              TextSpan(
-                                text: "/mês",
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
+                            );
+                          },
+                        )
+                      : Container(
+                          height: 118,
+                          width: double.maxFinite,
+                          color: Colors.grey[300],
+                          child: Icon(
+                            _getCategoryIcon(),
+                            size: 50,
+                            color: Colors.grey,
                           ),
                         ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8, right: 8),
-                        child: Text(
-                          element.title,
-                          style: const TextStyle(
-                            color: Colors.black,
-                            fontSize: 10,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8, right: 8),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.location_on_rounded, size: 8),
-                            Text(
-                              element.location,
-                              style: const TextStyle(
-                                color: Colors.black,
-                                fontSize: 8,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8, right: 8),
-                        child: Wrap(
-                          direction: Axis.horizontal,
-                          spacing: 5,
-                          runSpacing: 5.0,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: element.attributes.entries.map((el) {
-                            return renderPropertyAttribute(el);
-                          }).toList(),
-                        ),
-                      ),
-                    ],
+                ),
+                Positioned(
+                  bottom: 12,
+                  right: 16,
+                  child: HeartCircleButton(
+                    isFavorite: isFavorite,
+                    onTap: () {
+                      setState(() {
+                        isFavorite = !isFavorite;
+                      });
+                    },
                   ),
                 ),
-              );
-            }).toList(),
-          ),
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 8, left: 8, right: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 7,
+                    height: 7,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.green,
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  Text(
+                    widget.finalidade == 'ARRENDAMENTO'
+                        ? "Para arrendar"
+                        : "Para venda",
+                    style: const TextStyle(fontSize: 8),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.only(left: 8, right: 8),
+              child: RichText(
+                text: TextSpan(
+                  children: [
+                    TextSpan(
+                      text: _formatPrice(widget.preco),
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    TextSpan(
+                      text: widget.finalidade == 'ARRENDAMENTO' ? '/mês' : '',
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(left: 8, right: 8),
+              child: Text(
+                widget.titulo,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.only(left: 8, right: 8),
+              child: Text(
+                widget.descricao,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: Colors.grey[600], fontSize: 8),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.only(left: 8, right: 8),
+              child: Wrap(
+                direction: Axis.horizontal,
+                spacing: 5,
+                runSpacing: 5.0,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  _buildAttribute(Icons.category, widget.categoria),
+                  if (widget.area > 0)
+                    _buildAttribute(
+                      Icons.square_foot,
+                      '${widget.area.toInt()}m²',
+                    ),
+                ],
+              ),
+            ),
+          ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildAttribute(IconData icon, String value) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 12, color: Colors.grey[600]),
+        const SizedBox(width: 2),
+        Text(value, style: TextStyle(fontSize: 8, color: Colors.grey[600])),
       ],
     );
   }
@@ -523,3 +651,5 @@ class HeartCircleButton extends StatelessWidget {
     );
   }
 }
+
+const List<String> quickOptions = ["Arrendar", "Comprar", "Vender"];

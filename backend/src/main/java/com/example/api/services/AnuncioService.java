@@ -45,7 +45,7 @@ public class AnuncioService {
         // 2. Verificar se há anúncios pendentes para este imóvel
         List<Anuncio> anunciosPendentes = anuncioRepository.findByIdImovel(idImovel);
         boolean temPendenteOuPublicado = anunciosPendentes.stream()
-            .anyMatch(a -> "PENDENTE".equals(a.getStatusAnuncio()) || "PUBLICADO".equals(a.getStatusAnuncio()));
+                .anyMatch(a -> "PENDENTE".equals(a.getStatusAnuncio()) || "PUBLICADO".equals(a.getStatusAnuncio()));
 
         if (temPendenteOuPublicado) {
             throw new RuntimeException("Este imóvel já tem um anúncio pendente ou publicado");
@@ -57,16 +57,14 @@ public class AnuncioService {
         // 4. Debitar créditos
         debitoCreditos(credito, CUSTO_ANUNCIO);
 
-        // 5. Criar anúncio
+        // 5. Criar anúncio JÁ PUBLICADO com data de expiração
         Anuncio anuncio = new Anuncio();
-        anuncio.setIdImovel(idImovel);
+        anuncio.setImovel(imovel); // ✅ Passa o objeto Imovel completo
         anuncio.setDataPublicacao(LocalDateTime.now());
-        anuncio.setStatusAnuncio("PENDENTE");
+        anuncio.setStatusAnuncio("PUBLICADO"); // ✅ JÁ PUBLICADO
+        anuncio.setDataExpiracao(LocalDateTime.now().plusDays(DURACAO_ANUNCIO_DIAS)); // ✅ +30 dias
         anuncio.setVisualizacoes(0);
         anuncio.setCustoCredito(CUSTO_ANUNCIO);
-
-        // Data de expiração opcional (definida quando publicado)
-        // anuncio.setDataExpiracao(LocalDateTime.now().plusDays(DURACAO_ANUNCIO_DIAS));
 
         return anuncioRepository.save(anuncio);
     }
@@ -84,9 +82,9 @@ public class AnuncioService {
 
         if (credito.getSaldo().compareTo(custoNecessario) < 0) {
             throw new RuntimeException(
-                String.format("Créditos insuficientes. Possui: %.0f, Necessário: %.0f",
-                    credito.getSaldo().doubleValue(),
-                    custoNecessario.doubleValue()));
+                    String.format("Créditos insuficientes. Possui: %.0f, Necessário: %.0f",
+                            credito.getSaldo().doubleValue(),
+                            custoNecessario.doubleValue()));
         }
 
         return credito;
@@ -99,27 +97,7 @@ public class AnuncioService {
         creditoRepository.save(credito);
     }
 
-    // ========== PUBLICAÇÃO DE ANÚNCIOS ==========
-
-    @Transactional
-    public Anuncio publicarAnuncio(Long idAnuncio) {
-        Optional<Anuncio> anuncioOpt = anuncioRepository.findById(idAnuncio);
-        if (anuncioOpt.isEmpty()) {
-            throw new RuntimeException("Anúncio não encontrado");
-        }
-
-        Anuncio anuncio = anuncioOpt.get();
-
-        if (!"PENDENTE".equals(anuncio.getStatusAnuncio())) {
-            throw new RuntimeException("Apenas anúncios pendentes podem ser publicados");
-        }
-
-        // Publicar anúncio
-        anuncio.setStatusAnuncio("PUBLICADO");
-        anuncio.setDataExpiracao(LocalDateTime.now().plusDays(DURACAO_ANUNCIO_DIAS));
-
-        return anuncioRepository.save(anuncio);
-    }
+    // ========== GESTÃO DE ANÚNCIOS ==========
 
     @Transactional
     public Anuncio suspenderAnuncio(Long idAnuncio) {
@@ -149,17 +127,19 @@ public class AnuncioService {
         List<Anuncio> anunciosVencidos = anuncioRepository.findAnunciosExpirados(LocalDateTime.now());
 
         for (Anuncio anuncio : anunciosVencidos) {
-            // Verificar se anunciante tem créditos para renovar (>= 50)
-            Long idAnunciante = imovelRepository.findById(anuncio.getIdImovel())
-                    .map(Imovel::getIdAnunciante)
-                    .orElse(null);
+            Long idAnunciante = anuncio.getImovel() != null
+                    ? imovelRepository.findById(anuncio.getImovel().getId())
+                            .map(Imovel::getIdAnunciante)
+                            .orElse(null)
+                    : null;
 
             if (idAnunciante != null) {
                 Credito credito = verificarECalcularCreditos(idAnunciante, CUSTO_ANUNCIO);
                 // Se chegou aqui, tem créditos suficientes (>= 50)
 
                 try {
-                    // 🟢 RENOVAR AUTOMATICAMENTE: Debitar 50 créditos e renovar anúncio por +30 dias
+                    // 🟢 RENOVAR AUTOMATICAMENTE: Debitar 50 créditos e renovar anúncio por +30
+                    // dias
                     debitoCreditos(credito, CUSTO_ANUNCIO);
                     anuncio.setDataExpiracao(LocalDateTime.now().plusDays(DURACAO_ANUNCIO_DIAS));
                     anuncioRepository.save(anuncio);

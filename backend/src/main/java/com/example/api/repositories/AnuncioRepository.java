@@ -13,7 +13,8 @@ import java.util.List;
 @Repository
 public interface AnuncioRepository extends JpaRepository<Anuncio, Long> {
 
-    List<Anuncio> findByIdImovel(Long idImovel);
+    @Query("SELECT a FROM Anuncio a WHERE a.imovel.id = :idImovel")
+    List<Anuncio> findByIdImovel(@Param("idImovel") Long idImovel);
 
     List<Anuncio> findByStatusAnuncio(String statusAnuncio);
 

@@ -1,6 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/core/constants/assets.dart';
-import 'package:flutter_application_1/features/profile/presentation/views/property_submition_summary.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 class PublishProperty extends StatefulWidget {
   const PublishProperty({super.key});
@@ -10,462 +13,615 @@ class PublishProperty extends StatefulWidget {
 }
 
 class _PublishPropertyState extends State<PublishProperty> {
-  final images = const [AppImages.beachHouse2, AppImages.beachHouse3];
-  String? selectedCategory = "Terreno";
-  String? selectedParking = "Sim";
-  final TextEditingController _priceController = TextEditingController();
-  final TextEditingController _contactController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
+  int _currentStep = 0;
+  bool _isLoading = false;
+  bool _isAdvertiser = false;
+  int? _anuncianteId;
+  double _credits = 0.0;
 
-  final ButtonStyle selectedButtonStyle = TextButton.styleFrom(
-    backgroundColor: const Color(0xFF333333),
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(10),
-      side: const BorderSide(width: 1, color: Color(0xFFA6A6A6)),
-    ),
-  );
+  // Etapa 1: Dados do Imóvel
+  final _tituloController = TextEditingController();
+  final _descricaoController = TextEditingController();
+  final _precoController = TextEditingController();
+  final _areaController = TextEditingController();
+  String _finalidade = 'VENDA';
+  String _categoria = 'Casa';
+  XFile? _imagemPrincipal;
 
-  final ButtonStyle unselectedButtonStyle = TextButton.styleFrom(
-    backgroundColor: Colors.white,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(10),
-      side: const BorderSide(width: 1, color: Color(0xFFA6A6A6)),
-    ),
-  );
+  // Etapa 2: Localização
+  final _paisController = TextEditingController(text: 'Moçambique');
+  final _provinciaController = TextEditingController();
+  final _cidadeController = TextEditingController();
+  final _bairroController = TextEditingController();
+
+  // Etapa 3: Documento do Imóvel
+  XFile? _documentoImovel;
+  String _tipoDocumento = 'ESCRITURA';
 
   @override
-  void dispose() {
-    _priceController.dispose();
-    _contactController.dispose();
-    _descriptionController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    _checkAdvertiserStatus();
+  }
+
+  Future<void> _checkAdvertiserStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final visitorId = prefs.getInt('visitorId');
+
+    if (visitorId == null) {
+      _showError('Você precisa estar logado');
+      Navigator.pop(context);
+      return;
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse('http://localhost:8080/api/anunciante/visitante/$visitorId'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          _isAdvertiser = true;
+          _anuncianteId = data['id'];
+        });
+        await _loadCredits();
+      } else {
+        _showError('Apenas anunciantes podem publicar propriedades');
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      _showError('Erro ao verificar status: $e');
+      Navigator.pop(context);
+    }
+  }
+
+  Future<void> _loadCredits() async {
+    if (_anuncianteId == null) return;
+
+    try {
+      final response = await http.get(
+        Uri.parse(
+          'http://localhost:8080/api/creditos/anunciante/$_anuncianteId',
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          _credits = (data['saldo_creditos'] ?? 0).toDouble();
+        });
+
+        if (_credits < 50) {
+          _showError(
+            'Créditos insuficientes. Necessário: 50, Disponível: ${_credits.toStringAsFixed(0)}',
+          );
+          Navigator.pop(context);
+        }
+      }
+    } catch (e) {
+      print('Erro ao carregar créditos: $e');
+    }
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      setState(() {
+        _imagemPrincipal = pickedFile;
+      });
+    }
+  }
+
+  Future<void> _pickDocument() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      setState(() {
+        _documentoImovel = pickedFile;
+      });
+    }
+  }
+
+  Future<void> _submitStep() async {
+    // Etapa 1: Validação Dados do Imóvel
+    if (_currentStep == 0) {
+      if (_tituloController.text.isEmpty ||
+          _precoController.text.isEmpty ||
+          _areaController.text.isEmpty) {
+        _showError('Preencha Título, Preço e Área para continuar');
+        return;
+      }
+      setState(() => _currentStep++);
+    }
+    // Etapa 2: Validação Localização
+    else if (_currentStep == 1) {
+      if (_provinciaController.text.isEmpty || _cidadeController.text.isEmpty) {
+        _showError('Preencha Província e Cidade para continuar');
+        return;
+      }
+      setState(() => _currentStep++);
+    }
+    // Etapa 3: Publicar Tudo
+    else if (_currentStep == 2) {
+      await _publishAll();
+    }
+  }
+
+  Future<void> _publishAll() async {
+    if (_anuncianteId == null) {
+      _showError('Erro de sessão: Anunciante não identificado.');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      // 1. Criar Imóvel e obter ID
+      final imovelId = await _createImovelAction();
+      print('Imóvel criado com ID: $imovelId');
+
+      // 2. Criar Localização
+      await _createLocalizacaoAction(imovelId);
+      print('Localização criada');
+
+      // 3. Upload Documento (Opcional)
+      if (_documentoImovel != null) {
+        await _uploadDocumentoAction(imovelId);
+        print('Documento enviado');
+      }
+
+      // 4. Criar Anúncio
+      await _createAnuncioAction(imovelId);
+      print('Anúncio criado');
+
+      _showSuccess('Propriedade publicada com sucesso! 50 créditos debitados.');
+      Navigator.pop(context);
+    } catch (e) {
+      print('Erro no fluxo de publicação: $e');
+      _showError(e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<int> _createImovelAction() async {
+    var request = http.MultipartRequest(
+      'POST',
+      Uri.parse('http://localhost:8080/api/imovel/criar'),
+    );
+
+    request.fields['titulo'] = _tituloController.text;
+    request.fields['descricao'] = _descricaoController.text;
+    request.fields['precoMzn'] = _precoController.text
+        .replaceAll(',', '.')
+        .replaceAll(' ', '');
+    request.fields['area'] = _areaController.text
+        .replaceAll(',', '.')
+        .replaceAll(' ', '');
+    request.fields['finalidade'] = _finalidade;
+    request.fields['categoria'] = _categoria;
+    request.fields['idAnunciante'] = _anuncianteId.toString();
+
+    if (_imagemPrincipal != null) {
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'imagemPrincipal',
+          await _imagemPrincipal!.readAsBytes(),
+          filename: _imagemPrincipal!.name,
+          contentType: MediaType(
+            'image',
+            _getImageExtension(_imagemPrincipal!.name),
+          ),
+        ),
+      );
+    }
+
+    final response = await request.send();
+    final responseData = await response.stream.bytesToString();
+    final data = jsonDecode(responseData);
+
+    if (response.statusCode == 200 && data['success'] == true) {
+      return data['imovel']['id'];
+    } else {
+      throw Exception(data['error'] ?? 'Erro ao criar imóvel');
+    }
+  }
+
+  Future<void> _createLocalizacaoAction(int imovelId) async {
+    final response = await http.post(
+      Uri.parse('http://localhost:8080/api/localizacao/criar'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'pais': _paisController.text,
+        'provincia': _provinciaController.text,
+        'cidade': _cidadeController.text,
+        'bairro': _bairroController.text,
+        'idImovel': imovelId,
+      }),
+    );
+
+    final data = jsonDecode(response.body);
+    if (response.statusCode != 200 || data['success'] != true) {
+      throw Exception(data['error'] ?? 'Erro ao criar localização');
+    }
+  }
+
+  Future<void> _uploadDocumentoAction(int imovelId) async {
+    var request = http.MultipartRequest(
+      'POST',
+      Uri.parse('http://localhost:8080/api/documento_imovel/criar'),
+    );
+
+    request.fields['idImovel'] = imovelId.toString();
+    request.fields['tipoDocumento'] = _tipoDocumento;
+
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'documento',
+        await _documentoImovel!.readAsBytes(),
+        filename: _documentoImovel!.name,
+        contentType: MediaType(
+          'image',
+          _getImageExtension(_documentoImovel!.name),
+        ),
+      ),
+    );
+
+    final response = await request.send();
+
+    if (response.statusCode != 200) {
+      final responseData = await response.stream.bytesToString();
+      final data = jsonDecode(responseData);
+      throw Exception(data['error'] ?? 'Erro ao fazer upload do documento');
+    }
+  }
+
+  Future<void> _createAnuncioAction(int imovelId) async {
+    final response = await http.post(
+      Uri.parse('http://localhost:8080/api/anuncio/criar?idImovel=$imovelId'),
+    );
+
+    final data = jsonDecode(response.body);
+
+    if (response.statusCode != 200 || data['success'] != true) {
+      throw Exception(data['error'] ?? 'Erro ao criar anúncio');
+    }
+  }
+
+  String _getImageExtension(String filename) {
+    final extension = filename.split('.').last.toLowerCase();
+    // Mapear extensões para subtipos MIME corretos
+    switch (extension) {
+      case 'jpg':
+      case 'jpeg':
+        return 'jpeg';
+      case 'png':
+        return 'png';
+      case 'gif':
+        return 'gif';
+      case 'bmp':
+        return 'bmp';
+      case 'webp':
+        return 'webp';
+      default:
+        return 'jpeg'; // fallback
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
+  }
+
+  void _showSuccess(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.green),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
-
     return Container(
-      width: double.infinity,
-      height: screenHeight * 0.94,
-      padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(28),
-          topRight: Radius.circular(28),
-        ),
-      ),
+      height: MediaQuery.of(context).size.height * 0.9,
+      padding: const EdgeInsets.all(20),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
           // Header
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              const Text(
+                'Publicar Propriedade',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              ),
               IconButton(
                 icon: const Icon(Icons.close),
                 onPressed: () => Navigator.pop(context),
-                padding: EdgeInsets.zero,
               ),
-              const Spacer(),
-              Text(
-                "Publicar Propriedade",
-                style: const TextStyle(
-                  fontWeight: FontWeight.w500,
-                  fontSize: 16,
-                ),
-              ),
-              const Spacer(),
             ],
           ),
-          // Scrollable Content
-          Expanded(
-            child: SingleChildScrollView(
-              physics: const ClampingScrollPhysics(),
-              padding: EdgeInsets.only(bottom: bottomPadding),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildImageSection(),
-                  _buildTextFieldSection("Título", TextInputType.text),
-                  _buildTextFieldSection(
-                    "Endereço",
-                    TextInputType.streetAddress,
-                  ),
-                  _buildCategorySection(),
-                  selectedCategory == "Terreno"
-                      ? _buildLandSection()
-                      : _buildNumberInputSection(),
-                  _buildPriceSection(),
-                  _buildContactSection(),
-                  _buildDescriptionSection(),
-                  _buildSubmitButton(),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+          const SizedBox(height: 10),
 
-  Widget _buildImageSection() {
-    return PublishPropertySection(
-      title: "Adicionar fotos",
-      child: Row(
-        children: [
-          Expanded(
-            child: SizedBox(
-              height: 120,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                itemCount: images.length,
-                itemBuilder: (context, index) => Container(
-                  margin: const EdgeInsets.only(right: 10),
-                  clipBehavior: Clip.hardEdge,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(5),
-                  ),
-                  child: Image(
-                    image: AssetImage(images[index]),
-                    width: 120,
-                    height: 120,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-            ),
-          ),
+          // Créditos disponíveis
           Container(
-            width: 120,
-            height: 120,
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFFD8D8D8),
-              borderRadius: BorderRadius.circular(5),
-              border: Border.fromBorderSide(
-                BorderSide(width: 0.9, color: Colors.grey.shade400),
-              ),
+              color: Colors.blue[50],
+              borderRadius: BorderRadius.circular(8),
             ),
-            child: Column(
-              children: [
-                const Spacer(flex: 3),
-                const Icon(Icons.camera_alt_outlined, size: 24),
-                const Spacer(flex: 2),
-                Text("Adicionar fotos", style: const TextStyle(fontSize: 12)),
-                const Spacer(flex: 3),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTextFieldSection(String title, TextInputType keyboardType) {
-    return PublishPropertySection(
-      title: title,
-      child: TextField(
-        keyboardType: keyboardType,
-        decoration: InputDecoration(
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 14,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderSide: const BorderSide(width: 1, color: Color(0xFFA6A6A6)),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderSide: const BorderSide(width: 1, color: Color(0xFFA6A6A6)),
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategorySection() {
-    return PublishPropertySection(
-      title: "Categoria",
-      child: Row(
-        children: [
-          _buildCategoryButton("Terreno", "Terreno"),
-          const SizedBox(width: 10),
-          _buildCategoryButton("Arrendar", "Arrendar"),
-          const SizedBox(width: 10),
-          _buildCategoryButton("A Venda", "A Venda"),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCategoryButton(String label, String value) {
-    return Expanded(
-      child: TextButton(
-        onPressed: () => setState(() => selectedCategory = value),
-        style: selectedCategory == value
-            ? selectedButtonStyle
-            : unselectedButtonStyle,
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selectedCategory == value ? Colors.white : Colors.black,
-            fontWeight: FontWeight.w500,
-            fontSize: 14,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLandSection() {
-    return Row(
-      children: [
-        _buildNumberField("Largura(M)", size: 100),
-        const SizedBox(width: 10),
-        _buildNumberField("Comprimento(M)", size: 140),
-      ],
-    );
-  }
-
-  Widget _buildNumberInputSection() {
-    return Row(
-      children: [
-        _buildNumberField("Quartos"),
-        const SizedBox(width: 20),
-        _buildNumberField("Banheiros"),
-        const SizedBox(width: 20),
-        Expanded(
-          child: PublishPropertySection(
-            title: "Estacionamento",
             child: Row(
               children: [
-                Expanded(
-                  child: TextButton(
-                    onPressed: () => setState(() => selectedParking = "Sim"),
-                    style: _parkingButtonStyle("Sim"),
-                    child: Text(
-                      "Sim",
-                      style: TextStyle(
-                        color: selectedParking == "Sim"
-                            ? Colors.white
-                            : Colors.black,
-                        fontWeight: FontWeight.w500,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: TextButton(
-                    onPressed: () => setState(() => selectedParking = "Não"),
-                    style: _parkingButtonStyle("Não"),
-                    child: Text(
-                      "Não",
-                      style: TextStyle(
-                        color: selectedParking == "Não"
-                            ? Colors.white
-                            : Colors.black,
-                        fontWeight: FontWeight.w500,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
+                const Icon(Icons.account_balance_wallet, color: Colors.blue),
+                const SizedBox(width: 8),
+                Text(
+                  'Créditos: ${_credits.toStringAsFixed(0)} | Custo: 50',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
               ],
             ),
           ),
-        ),
-      ],
-    );
-  }
+          const SizedBox(height: 20),
 
-  ButtonStyle _parkingButtonStyle(String value) {
-    return TextButton.styleFrom(
-      backgroundColor: selectedParking == value
-          ? const Color(0xFF333333)
-          : Colors.white,
-      shape: RoundedRectangleBorder(
-        side: const BorderSide(width: 1, color: Color(0xFFA6A6A6)),
-        borderRadius: value == "Sim"
-            ? const BorderRadius.horizontal(left: Radius.circular(10))
-            : const BorderRadius.horizontal(right: Radius.circular(10)),
-      ),
-      minimumSize: const Size(0, 55),
-    );
-  }
-
-  Widget _buildNumberField(String title, {double size = 80}) {
-    return SizedBox(
-      width: size,
-      child: PublishPropertySection(
-        title: title,
-        child: TextField(
-          keyboardType: TextInputType.number,
-          textAlign: TextAlign.center,
-          style: const TextStyle(),
-          decoration: InputDecoration(
-            contentPadding: const EdgeInsets.symmetric(vertical: 12),
-            enabledBorder: OutlineInputBorder(
-              borderSide: const BorderSide(width: 1, color: Color(0xFFA6A6A6)),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderSide: const BorderSide(width: 1, color: Color(0xFFA6A6A6)),
-              borderRadius: BorderRadius.circular(10),
+          // Stepper
+          Expanded(
+            child: Stepper(
+              currentStep: _currentStep,
+              onStepContinue: _isLoading ? null : _submitStep,
+              onStepCancel: _currentStep > 0
+                  ? () => setState(() => _currentStep--)
+                  : null,
+              controlsBuilder: (context, details) {
+                return Row(
+                  children: [
+                    ElevatedButton(
+                      onPressed: _isLoading ? null : details.onStepContinue,
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Text(_currentStep == 2 ? 'Publicar' : 'Continuar'),
+                    ),
+                    if (_currentStep > 0) ...[
+                      const SizedBox(width: 12),
+                      TextButton(
+                        onPressed: details.onStepCancel,
+                        child: const Text('Voltar'),
+                      ),
+                    ],
+                  ],
+                );
+              },
+              steps: [_buildStep1(), _buildStep2(), _buildStep3()],
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPriceSection() {
-    return PublishPropertySection(
-      title: "Preço",
-      child: TextField(
-        controller: _priceController,
-        keyboardType: TextInputType.number,
-        decoration: InputDecoration(
-          suffixText: "MT",
-          suffixStyle: const TextStyle(fontWeight: FontWeight.w500),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 14,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderSide: const BorderSide(width: 1, color: Color(0xFFA6A6A6)),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderSide: const BorderSide(width: 1, color: Color(0xFFA6A6A6)),
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildContactSection() {
-    return PublishPropertySection(
-      title: "Contactos",
-      child: TextField(
-        controller: _contactController,
-        keyboardType: TextInputType.phone,
-        decoration: InputDecoration(
-          prefixText: "+258 ",
-          prefixStyle: const TextStyle(fontWeight: FontWeight.w500),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 14,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderSide: const BorderSide(width: 1, color: Color(0xFFA6A6A6)),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderSide: const BorderSide(width: 1, color: Color(0xFFA6A6A6)),
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDescriptionSection() {
-    return PublishPropertySection(
-      title: "Descrição",
-      child: TextField(
-        controller: _descriptionController,
-        keyboardType: TextInputType.multiline,
-        maxLines: 4,
-        minLines: 4,
-        decoration: InputDecoration(
-          hintText: "Descreva a propriedade em detalhes...",
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 14,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderSide: const BorderSide(width: 1, color: Color(0xFFA6A6A6)),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderSide: const BorderSide(width: 1, color: Color(0xFFA6A6A6)),
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSubmitButton() {
-    return Padding(
-      padding: const EdgeInsets.only(top: 20),
-      child: ElevatedButton(
-        onPressed: () {
-          // Handle form submission
-          showModalBottomSheet(
-            isScrollControlled: true,
-            context: context,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(30),
-                topRight: Radius.circular(30),
-              ),
-            ),
-            builder: (context) {
-              return const PropertySubmitionSummary();
-            },
-          );
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF333333),
-          minimumSize: const Size(double.infinity, 50),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
-          ),
-        ),
-        child: Text(
-          "Continuar",
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-            fontSize: 16,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class PublishPropertySection extends StatelessWidget {
-  const PublishPropertySection({
-    super.key,
-    required this.title,
-    required this.child,
-  });
-
-  final String title;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          child,
         ],
       ),
     );
+  }
+
+  Step _buildStep1() {
+    return Step(
+      title: const Text('Dados do Imóvel'),
+      content: Column(
+        children: [
+          TextField(
+            controller: _tituloController,
+            decoration: const InputDecoration(
+              labelText: 'Título *',
+              prefixIcon: Icon(Icons.title, color: Colors.black),
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _descricaoController,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              labelText: 'Descrição',
+              prefixIcon: Icon(Icons.description, color: Colors.black),
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _precoController,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Preço (MZN) *',
+              prefixIcon: Icon(Icons.attach_money, color: Colors.black),
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _areaController,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Área (m²) *',
+              prefixIcon: Icon(Icons.square_foot, color: Colors.black),
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            value: _finalidade,
+            decoration: const InputDecoration(
+              labelText: 'Finalidade',
+              prefixIcon: Icon(Icons.business_center, color: Colors.black),
+              border: OutlineInputBorder(),
+            ),
+            items: ['VENDA', 'ARRENDAMENTO'].map((String value) {
+              return DropdownMenuItem<String>(value: value, child: Text(value));
+            }).toList(),
+            onChanged: (value) => setState(() => _finalidade = value!),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            value: _categoria,
+            decoration: const InputDecoration(
+              labelText: 'Categoria',
+              prefixIcon: Icon(Icons.home, color: Colors.black),
+              border: OutlineInputBorder(),
+            ),
+            items: ['Casa', 'Apartamento', 'Terreno', 'Comercial'].map((
+              String value,
+            ) {
+              return DropdownMenuItem<String>(value: value, child: Text(value));
+            }).toList(),
+            onChanged: (value) => setState(() => _categoria = value!),
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton.icon(
+            onPressed: _pickImage,
+            icon: const Icon(Icons.image, color: Colors.black),
+            label: Text(
+              _imagemPrincipal == null
+                  ? 'Adicionar Imagem'
+                  : 'Imagem Selecionada',
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.grey[200],
+              foregroundColor: Colors.black,
+            ),
+          ),
+        ],
+      ),
+      isActive: _currentStep >= 0,
+      state: _currentStep > 0 ? StepState.complete : StepState.indexed,
+    );
+  }
+
+  Step _buildStep2() {
+    return Step(
+      title: const Text('Localização'),
+      content: Column(
+        children: [
+          TextField(
+            controller: _paisController,
+            decoration: const InputDecoration(
+              labelText: 'País',
+              prefixIcon: Icon(Icons.public, color: Colors.black),
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _provinciaController,
+            decoration: const InputDecoration(
+              labelText: 'Província *',
+              prefixIcon: Icon(Icons.location_city, color: Colors.black),
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _cidadeController,
+            decoration: const InputDecoration(
+              labelText: 'Cidade *',
+              prefixIcon: Icon(Icons.location_on, color: Colors.black),
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _bairroController,
+            decoration: const InputDecoration(
+              labelText: 'Bairro',
+              prefixIcon: Icon(Icons.place, color: Colors.black),
+              border: OutlineInputBorder(),
+            ),
+          ),
+        ],
+      ),
+      isActive: _currentStep >= 1,
+      state: _currentStep > 1 ? StepState.complete : StepState.indexed,
+    );
+  }
+
+  Step _buildStep3() {
+    return Step(
+      title: const Text('Documento (Opcional)'),
+      content: Column(
+        children: [
+          DropdownButtonFormField<String>(
+            value: _tipoDocumento,
+            decoration: const InputDecoration(
+              labelText: 'Tipo de Documento',
+              prefixIcon: Icon(Icons.description, color: Colors.black),
+              border: OutlineInputBorder(),
+            ),
+            items:
+                [
+                  'ESCRITURA',
+                  'CERTIDAO_DE_REGISTO_PREDIAL',
+                  'LICENCA_DE_CONSTRUCAO',
+                  'PLANTA_CROQUIS',
+                  'BI',
+                  'NUIT',
+                  'DUAT',
+                  'OUTRO',
+                ].map((String value) {
+                  // Exibir nome amigável mas enviar valor do enum
+                  String displayName = value;
+                  if (value == 'CERTIDAO_DE_REGISTO_PREDIAL') {
+                    displayName = 'Certidão de Registo Predial';
+                  } else if (value == 'LICENCA_DE_CONSTRUCAO') {
+                    displayName = 'Licença de Construção';
+                  } else if (value == 'PLANTA_CROQUIS') {
+                    displayName = 'Planta/Croquis';
+                  } else {
+                    displayName = value;
+                  }
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(displayName),
+                  );
+                }).toList(),
+            onChanged: (value) => setState(() => _tipoDocumento = value!),
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton.icon(
+            onPressed: _pickDocument,
+            icon: const Icon(Icons.upload_file, color: Colors.black),
+            label: Text(
+              _documentoImovel == null
+                  ? 'Adicionar Documento'
+                  : 'Documento Selecionado',
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.grey[200],
+              foregroundColor: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'O documento é opcional. Clique em "Publicar" para finalizar.',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+        ],
+      ),
+      isActive: _currentStep >= 2,
+      state: StepState.indexed,
+    );
+  }
+
+  @override
+  void dispose() {
+    _tituloController.dispose();
+    _descricaoController.dispose();
+    _precoController.dispose();
+    _areaController.dispose();
+    _paisController.dispose();
+    _provinciaController.dispose();
+    _cidadeController.dispose();
+    _bairroController.dispose();
+    super.dispose();
   }
 }

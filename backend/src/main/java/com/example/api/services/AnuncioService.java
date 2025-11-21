@@ -51,17 +51,14 @@ public class AnuncioService {
             throw new RuntimeException("Este imóvel já tem um anúncio pendente ou publicado");
         }
 
-        // 3. Verificar créditos do anunciante
         Credito credito = verificarECalcularCreditos(imovel.getIdAnunciante(), CUSTO_ANUNCIO);
 
-        // 4. Debitar créditos
         debitoCreditos(credito, CUSTO_ANUNCIO);
 
-        // 5. Criar anúncio JÁ PUBLICADO com data de expiração
         Anuncio anuncio = new Anuncio();
-        anuncio.setImovel(imovel); // ✅ Passa o objeto Imovel completo
+        anuncio.setImovel(imovel);
         anuncio.setDataPublicacao(LocalDateTime.now());
-        anuncio.setStatusAnuncio("PUBLICADO"); // ✅ JÁ PUBLICADO
+        anuncio.setStatusAnuncio("PUBLICADO");
         anuncio.setDataExpiracao(LocalDateTime.now().plusDays(DURACAO_ANUNCIO_DIAS)); // ✅ +30 dias
         anuncio.setVisualizacoes(0);
         anuncio.setCustoCredito(CUSTO_ANUNCIO);

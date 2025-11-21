@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'package:flutter_application_1/core/constants/colors.dart';
 import 'package:flutter_application_1/wrapper.dart';
 
@@ -18,23 +20,43 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     setState(() => _isLoading = true);
 
-    await Future.delayed(const Duration(seconds: 1));
+    try {
+      final response = await http.post(
+        Uri.parse('http://localhost:8080/api/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'email': _emailController.text,
+          'senha': _passwordController.text,
+        }),
+      );
 
-    if (_emailController.text == 'ivanymassinga@gmail.com' &&
-        _passwordController.text == '1234') {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('isLoggedIn', true);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final visitanteId = data['visitanteId'];
 
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const Wrapper()),
-        );
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('isLoggedIn', true);
+        await prefs.setInt('visitorId', visitanteId);
+        print('✅ Login bem-sucedido! visitorId salvo: $visitanteId');
+
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const Wrapper()),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Credenciais inválidas')),
+          );
+        }
       }
-    } else {
+    } catch (e) {
+      print('❌ Erro no login: $e');
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Credenciais inválidas')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Erro ao conectar com o servidor')),
+        );
       }
     }
 

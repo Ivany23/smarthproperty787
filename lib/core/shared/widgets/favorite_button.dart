@@ -34,22 +34,31 @@ class _FavoriteButtonState extends State<FavoriteButton> {
   }
 
   Future<void> _toggleFavorito() async {
+    print('⭐ _toggleFavorito - Iniciando. isFavorito atual: $_isFavorito');
     setState(() => _loading = true);
 
     bool success;
     if (_isFavorito) {
+      print('⭐ _toggleFavorito - Removendo favorito...');
       success = await _favoritoService.removerFavorito(widget.idImovel);
     } else {
+      print('⭐ _toggleFavorito - Adicionando favorito...');
       success = await _favoritoService.adicionarFavorito(widget.idImovel);
     }
+
+    print('⭐ _toggleFavorito - Success: $success');
 
     if (success && mounted) {
       setState(() {
         _isFavorito = !_isFavorito;
         _loading = false;
       });
+      print(
+        '⭐ _toggleFavorito - Estado atualizado. Novo isFavorito: $_isFavorito',
+      );
     } else if (mounted) {
       setState(() => _loading = false);
+      print('❌ _toggleFavorito - Falhou ao atualizar');
     }
   }
 

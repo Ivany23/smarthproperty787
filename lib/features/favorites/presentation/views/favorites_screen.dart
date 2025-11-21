@@ -24,10 +24,12 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   }
 
   Future<void> _loadFavoritos() async {
+    print('🔄 _loadFavoritos - Iniciando carregamento...');
     setState(() => _loading = true);
 
     try {
       final favoritos = await _favoritoService.listarFavoritos();
+      print('🔄 _loadFavoritos - Favoritos recebidos: ${favoritos.length}');
 
       Map<int, Map<String, dynamic>> tempImoveisData = {};
 
@@ -44,15 +46,23 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             idImovel = idImovelDynamic as int;
           }
 
+          print('🔄 _loadFavoritos - Buscando dados do imóvel ID: $idImovel');
           final imovelData = await _fetchImovelData(idImovel);
           if (imovelData != null) {
             tempImoveisData[idImovel] = imovelData;
+            print('✅ _loadFavoritos - Dados do imóvel $idImovel carregados');
+          } else {
+            print('⚠️ _loadFavoritos - Dados do imóvel $idImovel são null');
           }
         } catch (e) {
-          print('Erro ao processar favorito: $e');
+          print('❌ _loadFavoritos - Erro ao processar favorito: $e');
           continue;
         }
       }
+
+      print(
+        '🔄 _loadFavoritos - Total de imóveis carregados: ${tempImoveisData.length}',
+      );
 
       if (mounted) {
         setState(() {
@@ -62,7 +72,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         });
       }
     } catch (e) {
-      print('Erro ao carregar favoritos: $e');
+      print('❌ _loadFavoritos - Erro ao carregar favoritos: $e');
       if (mounted) {
         setState(() {
           _favoritos = [];

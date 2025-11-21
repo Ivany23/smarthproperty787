@@ -74,4 +74,27 @@ public class AuthService {
 
         return response;
     }
+
+    public Map<String, Object> recuperarSenha(String email, String codigoVerificacao, String novaSenha) {
+        Optional<Visitante> visitanteOptional = visitanteRepository.findByEmail(email);
+
+        if (visitanteOptional.isEmpty()) {
+            throw new RuntimeException("Email não encontrado");
+        }
+
+        Visitante visitante = visitanteOptional.get();
+
+        if (!codigoVerificacao.equals(visitante.getCodigoVerificacao())) {
+            throw new RuntimeException("Código de verificação inválido");
+        }
+
+        visitante.setSenhaHash(passwordEncoder.encode(novaSenha));
+        visitanteRepository.save(visitante);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Senha atualizada com sucesso");
+        response.put("success", true);
+
+        return response;
+    }
 }

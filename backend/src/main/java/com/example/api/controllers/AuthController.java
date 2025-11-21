@@ -1,6 +1,7 @@
 package com.example.api.controllers;
 
 import com.example.api.dtos.LoginDTO;
+import com.example.api.dtos.RecuperarSenhaDTO;
 import com.example.api.dtos.SignUpDTO;
 import com.example.api.services.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -24,7 +25,8 @@ public class AuthController {
     @PostMapping("/register")
     @Operation(summary = "✅ Registrar novo usuário", description = "Cria um novo usuário (visitante) e retorna seus dados completos")
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignUpDTO signUpDTO) {
-        Map<String, Object> response = authService.register(signUpDTO.nomeCompleto(), signUpDTO.email(), signUpDTO.telefone(), signUpDTO.senha());
+        Map<String, Object> response = authService.register(signUpDTO.nomeCompleto(), signUpDTO.email(),
+                signUpDTO.telefone(), signUpDTO.senha());
         return ResponseEntity.ok(response);
     }
 
@@ -35,6 +37,19 @@ public class AuthController {
             return ResponseEntity.ok(authService.login(loginDTO.email(), loginDTO.senha()));
         } catch (RuntimeException e) {
             return ResponseEntity.status(401).body(Map.of("success", false, "error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/recuperar-senha")
+    @Operation(summary = "🔑 Recuperar senha", description = "Recupera a senha do visitante usando email e código de verificação")
+    public ResponseEntity<?> recuperarSenha(@Valid @RequestBody RecuperarSenhaDTO recuperarSenhaDTO) {
+        try {
+            return ResponseEntity.ok(authService.recuperarSenha(
+                    recuperarSenhaDTO.email(),
+                    recuperarSenhaDTO.codigoVerificacao(),
+                    recuperarSenhaDTO.novaSenha()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(400).body(Map.of("success", false, "error", e.getMessage()));
         }
     }
 }

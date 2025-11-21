@@ -4,6 +4,7 @@ import 'package:flutter_application_1/core/constants/colors.dart';
 import 'package:flutter_application_1/core/shared/widgets/custom_button.dart';
 import 'package:flutter_application_1/core/shared/widgets/custom_input.dart';
 import 'package:flutter_application_1/features/authentication/presentation/views/sign_up.dart';
+import 'package:flutter_application_1/features/authentication/presentation/views/forgot_password_screen.dart';
 import 'package:flutter_application_1/wrapper.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -235,7 +236,29 @@ class _SignInScreenState extends State<SignInScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 16),
+                  // Link "Esqueceu a senha?"
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const ForgotPasswordScreen(),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        'Esqueceu a senha?',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   // Botão moderno com gradiente
                   Container(
                     decoration: BoxDecoration(

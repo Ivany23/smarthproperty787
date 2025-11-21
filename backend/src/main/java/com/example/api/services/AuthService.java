@@ -97,4 +97,22 @@ public class AuthService {
 
         return response;
     }
+
+    public Map<String, Object> solicitarCodigoVerificacao(String email) {
+        Optional<Visitante> visitanteOptional = visitanteRepository.findByEmail(email);
+
+        if (visitanteOptional.isEmpty()) {
+            throw new RuntimeException("Email não encontrado");
+        }
+
+        Visitante visitante = visitanteOptional.get();
+        String codigoVerificacao = visitante.getCodigoVerificacao();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Código de verificação encontrado");
+        response.put("codigoVerificacao", codigoVerificacao);
+        response.put("success", true);
+
+        return response;
+    }
 }

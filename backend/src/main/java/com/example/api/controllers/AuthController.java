@@ -52,4 +52,15 @@ public class AuthController {
             return ResponseEntity.status(400).body(Map.of("success", false, "error", e.getMessage()));
         }
     }
+
+    @PostMapping("/solicitar-codigo")
+    @Operation(summary = "📧 Solicitar código de verificação", description = "Retorna o código de verificação do email fornecido")
+    public ResponseEntity<?> solicitarCodigo(@RequestBody Map<String, String> request) {
+        try {
+            String email = request.get("email");
+            return ResponseEntity.ok(authService.solicitarCodigoVerificacao(email));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).body(Map.of("success", false, "error", e.getMessage()));
+        }
+    }
 }

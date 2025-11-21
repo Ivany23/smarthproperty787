@@ -33,7 +33,7 @@ public class ImovelImagem {
     @Column(name = "data_criacao", nullable = false)
     private OffsetDateTime dataCriacao = OffsetDateTime.now();
 
-    // Relationships for easier data handling
+
     @Transient
     private Imovel imovel;
 }

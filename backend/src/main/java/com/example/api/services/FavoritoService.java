@@ -18,7 +18,6 @@ public class FavoritoService {
     private FavoritoRepository favoritoRepository;
 
     public FavoritoDTO adicionarFavorito(Long idVisitante, Long idImovel) {
-        // Verificar se já existe
         if (favoritoRepository.existsByIdVisitanteAndIdImovel(idVisitante, idImovel)) {
             throw new RuntimeException("Este imóvel já está nos favoritos");
         }
@@ -59,7 +58,6 @@ public class FavoritoService {
         }).collect(Collectors.toList());
     }
 
-    // Métodos antigos mantidos para compatibilidade (deprecated)
     @Deprecated
     public FavoritoDTO createFavorito(FavoritoDTO favoritoDTO) {
         return adicionarFavorito(favoritoDTO.getIdVisitante(), favoritoDTO.getIdImovel());

@@ -19,7 +19,7 @@ import java.util.Optional;
 public class AnuncioService {
 
     private static final BigDecimal CUSTO_ANUNCIO = new BigDecimal("50");
-    private static final int DURACAO_ANUNCIO_DIAS = 30; // 30 dias por padrão
+    private static final int DURACAO_ANUNCIO_DIAS = 30;
 
     @Autowired
     private AnuncioRepository anuncioRepository;
@@ -30,11 +30,11 @@ public class AnuncioService {
     @Autowired
     private CreditoRepository creditoRepository;
 
-    // ========== DEBITO AUTOMÁTICO DE CRÉDITOS ==========
+
 
     @Transactional
     public Anuncio criarAnuncio(Long idImovel) {
-        // 1. Verificar se imóvel existe
+
         Optional<Imovel> imovelOpt = imovelRepository.findById(idImovel);
         if (imovelOpt.isEmpty()) {
             throw new RuntimeException("Imóvel não encontrado");
@@ -42,7 +42,7 @@ public class AnuncioService {
 
         Imovel imovel = imovelOpt.get();
 
-        // 2. Verificar se há anúncios pendentes para este imóvel
+
         List<Anuncio> anunciosPendentes = anuncioRepository.findByIdImovel(idImovel);
         boolean temPendenteOuPublicado = anunciosPendentes.stream()
                 .anyMatch(a -> "PENDENTE".equals(a.getStatusAnuncio()) || "PUBLICADO".equals(a.getStatusAnuncio()));
@@ -59,14 +59,14 @@ public class AnuncioService {
         anuncio.setImovel(imovel);
         anuncio.setDataPublicacao(LocalDateTime.now());
         anuncio.setStatusAnuncio("PUBLICADO");
-        anuncio.setDataExpiracao(LocalDateTime.now().plusDays(DURACAO_ANUNCIO_DIAS)); // ✅ +30 dias
+        anuncio.setDataExpiracao(LocalDateTime.now().plusDays(DURACAO_ANUNCIO_DIAS));
         anuncio.setVisualizacoes(0);
         anuncio.setCustoCredito(CUSTO_ANUNCIO);
 
         return anuncioRepository.save(anuncio);
     }
 
-    // ========== GESTÃO DE CRÉDITOS ==========
+
 
     private Credito verificarECalcularCreditos(Long idAnunciante, BigDecimal custoNecessario) {
         Optional<Credito> creditoOpt = creditoRepository.findByAnuncianteId(idAnunciante);
@@ -94,7 +94,7 @@ public class AnuncioService {
         creditoRepository.save(credito);
     }
 
-    // ========== GESTÃO DE ANÚNCIOS ==========
+
 
     @Transactional
     public Anuncio suspenderAnuncio(Long idAnuncio) {
@@ -109,7 +109,7 @@ public class AnuncioService {
         return anuncioRepository.save(anuncio);
     }
 
-    // ========== VISUALIZAÇÕES E EXPIRAÇÃO ==========
+
 
     @Transactional
     public void incrementarVisualizacao(Long idAnuncio) {
@@ -132,31 +132,31 @@ public class AnuncioService {
 
             if (idAnunciante != null) {
                 Credito credito = verificarECalcularCreditos(idAnunciante, CUSTO_ANUNCIO);
-                // Se chegou aqui, tem créditos suficientes (>= 50)
+
 
                 try {
-                    // 🟢 RENOVAR AUTOMATICAMENTE: Debitar 50 créditos e renovar anúncio por +30
-                    // dias
+
+
                     debitoCreditos(credito, CUSTO_ANUNCIO);
                     anuncio.setDataExpiracao(LocalDateTime.now().plusDays(DURACAO_ANUNCIO_DIAS));
                     anuncioRepository.save(anuncio);
 
-                    // 💡 Poderia registrar renovação, mas manter anúncio PUBLICA DO
+
 
                 } catch (Exception e) {
-                    // 🔴 SEM CRÉDITOS: Expira o anúncio
+
                     anuncio.setStatusAnuncio("EXPIRADO");
                     anuncioRepository.save(anuncio);
                 }
             } else {
-                // 🔴 IMÓVEL SEM ANUNCIANTE: Expira
+
                 anuncio.setStatusAnuncio("EXPIRADO");
                 anuncioRepository.save(anuncio);
             }
         }
     }
 
-    // ========== CONSULTAS BÁSICAS ==========
+
 
     public List<Anuncio> listarTodos() {
         return anuncioRepository.findAll();
@@ -182,8 +182,8 @@ public class AnuncioService {
 
         Anuncio anuncio = anuncioOpt.get();
 
-        // Se for anúncio publicado, verificar se pode excluir (opção futura)
-        // Por enquanto, permite excluir qualquer anúncio
+
+
 
         anuncioRepository.deleteById(id);
     }

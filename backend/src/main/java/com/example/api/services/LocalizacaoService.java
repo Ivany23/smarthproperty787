@@ -13,11 +13,11 @@ public class LocalizacaoService {
     private LocalizacaoRepository localizacaoRepository;
 
     public Localizacao salvar(Localizacao localizacao) {
-        // ✅ Verificar se já existe localização para este imóvel
+
         Optional<Localizacao> existente = localizacaoRepository.findByIdImovel(localizacao.getIdImovel());
 
         if (existente.isPresent()) {
-            // Se já existe, atualiza a localização existente
+
             Localizacao loc = existente.get();
             loc.setPais(localizacao.getPais());
             loc.setProvincia(localizacao.getProvincia());
@@ -26,7 +26,7 @@ public class LocalizacaoService {
             return localizacaoRepository.save(loc);
         }
 
-        // Se não existe, cria nova
+
         return localizacaoRepository.save(localizacao);
     }
 

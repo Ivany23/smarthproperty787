@@ -21,8 +21,8 @@ public class SwaggerConfig {
     @EventListener(ApplicationReadyEvent.class)
     public void printSwaggerUrl() {
         String port = environment.getProperty("local.server.port", "8080");
-        String swaggerUrl = "http://localhost:" + port + "/swagger-ui.html";
-        
+        String swaggerUrl = "http://localhost:" + port + "/swagger-ui/index.html";
+
         LOG.info("=================================================================");
         LOG.info("✅ Swagger UI está pronto e acessível!");
         LOG.info("🔗 Link direto: {}", swaggerUrl);

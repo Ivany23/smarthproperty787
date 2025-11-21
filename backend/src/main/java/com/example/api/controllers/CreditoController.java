@@ -62,7 +62,7 @@ public class CreditoController {
             if (valorPago.compareTo(new BigDecimal("1")) < 0 || valorPago.compareTo(new BigDecimal("1000")) > 0) {
                 throw new RuntimeException("Valor deve ser entre 1-1000 MZN");
             }
-            BigDecimal creditosComprados = valorPago; // 1 MZN = 1 crédito
+            BigDecimal creditosComprados = valorPago;
             Map<String, Object> resultado = anuncianteService.comprarCreditosComRegistro(idAnunciante, creditosComprados, metodoPagamento, valorPago);
             return ResponseEntity.ok(Map.of(
                 "success", true,

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/constants/assets.dart';
 import 'package:flutter_application_1/core/constants/colors.dart';
 import 'package:flutter_application_1/core/shared/widgets/custom_input.dart';
+import 'package:flutter_application_1/core/shared/widgets/favorite_button.dart';
 import 'package:flutter_application_1/features/home/presentation/views/offers_details.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
@@ -401,18 +402,21 @@ class _PropertyCardState extends State<PropertyCard> {
                           ),
                         ),
                 ),
-                Positioned(
-                  bottom: 12,
-                  right: 16,
-                  child: HeartCircleButton(
-                    isFavorite: isFavorite,
-                    onTap: () {
-                      setState(() {
-                        isFavorite = !isFavorite;
-                      });
-                    },
+                if (widget.imovelId != null)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black45,
+                        shape: BoxShape.circle,
+                      ),
+                      child: FavoriteButton(
+                        idImovel: widget.imovelId!,
+                        size: 20,
+                      ),
+                    ),
                   ),
-                ),
               ],
             ),
             Padding(

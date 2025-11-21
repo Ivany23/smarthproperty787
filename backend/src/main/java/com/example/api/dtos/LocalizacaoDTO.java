@@ -1,7 +1,7 @@
 package com.example.api.dtos;
 import com.example.api.entities.Localizacao;
 public class LocalizacaoDTO {
-    // ID não incluído - segue padrão das outras entidades
+
     private String pais;
     private String provincia;
     private String cidade;

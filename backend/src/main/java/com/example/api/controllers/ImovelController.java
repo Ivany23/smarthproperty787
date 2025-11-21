@@ -25,9 +25,9 @@ import java.util.stream.Collectors;
 
 import com.example.api.repositories.AnuncianteRepository;
 
-// =========================================
-// CONTROLLER PARA TABELA "imovel"
-// =========================================
+
+
+
 @RestController
 @RequestMapping("/api/imovel")
 @CrossOrigin(origins = "*")
@@ -36,7 +36,7 @@ public class ImovelController {
 
     private static final String MAIN_IMAGES_DIR = "backend/uploads/properties/main/";
 
-    // Allowed image MIME types for main image
+
     private static final String[] ALLOWED_IMAGE_TYPES = {
         "image/jpeg", "image/jpg", "image/png", "image/gif", "image/bmp", "image/webp"
     };
@@ -47,7 +47,7 @@ public class ImovelController {
     @Autowired
     private AnuncianteRepository anuncianteRepository;
 
-    // ============ OPERACOES BASICAS ==============
+
 
     @PostMapping(value = "/criar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "🏠 Criar imóvel com imagem principal", description = "Cria imóvel e opcionalmente faz upload da imagem principal")
@@ -61,28 +61,28 @@ public class ImovelController {
             @RequestParam("idAnunciante") Long idAnunciante,
             @RequestParam(value = "imagemPrincipal", required = false) MultipartFile imagemPrincipal) {
         try {
-            // Validate anunciante exists
+
             Optional<Anunciante> anuncianteOpt = anuncianteRepository.findById(idAnunciante);
             if (anuncianteOpt.isEmpty()) {
                 throw new RuntimeException("Anunciante não encontrado");
             }
 
-            // Handle main image upload if provided
+
             String mainImageUrl = null;
             if (imagemPrincipal != null && !imagemPrincipal.isEmpty()) {
                 validateImageFile(imagemPrincipal);
 
-                // Create directories
+
                 Files.createDirectories(Paths.get(MAIN_IMAGES_DIR));
 
-                // Generate unique filename
+
                 String fileName = UUID.randomUUID().toString() + "_main_" + imagemPrincipal.getOriginalFilename();
                 Path filePath = Paths.get(MAIN_IMAGES_DIR + fileName);
                 Files.write(filePath, imagemPrincipal.getBytes());
                 mainImageUrl = "/uploads/properties/main/" + fileName;
             }
 
-            // Create property manually (since ImovelService expects MultipartFile)
+
             Imovel imovel = new Imovel();
             imovel.setTitulo(titulo);
             imovel.setDescricao(descricao);
@@ -95,7 +95,7 @@ public class ImovelController {
             imovel.setIdAnunciante(idAnunciante);
             imovel.setCategoria(categoria);
 
-            Imovel saved = imovelService.save(imovel); // Assuming we add this method
+            Imovel saved = imovelService.save(imovel);
 
             return ResponseEntity.ok(Map.of(
                 "success", true,
@@ -134,7 +134,7 @@ public class ImovelController {
             @RequestParam("categoria") String categoria,
             @RequestParam(value = "imagemPrincipal", required = false) MultipartFile imagemPrincipal) {
         try {
-            // Get existing property
+
             Optional<Imovel> imovelOpt = imovelService.buscarImovel(id);
             if (imovelOpt.isEmpty()) {
                 return ResponseEntity.notFound().build();
@@ -143,19 +143,19 @@ public class ImovelController {
             Imovel imovel = imovelOpt.get();
             String oldMainImageUrl = imovel.getImagemPrincipalUrl();
 
-            // Handle main image update if provided
+
             String newMainImageUrl = oldMainImageUrl;
             if (imagemPrincipal != null && !imagemPrincipal.isEmpty()) {
                 validateImageFile(imagemPrincipal);
 
-                // Delete old main image
+
                 if (oldMainImageUrl != null) {
                     String oldFileName = oldMainImageUrl.substring("/uploads/properties/main/".length());
                     Path oldPath = Paths.get(MAIN_IMAGES_DIR + oldFileName);
                     Files.deleteIfExists(oldPath);
                 }
 
-                // Save new main image
+
                 Files.createDirectories(Paths.get(MAIN_IMAGES_DIR));
                 String fileName = UUID.randomUUID().toString() + "_main_" + imagemPrincipal.getOriginalFilename();
                 Path filePath = Paths.get(MAIN_IMAGES_DIR + fileName);
@@ -163,7 +163,7 @@ public class ImovelController {
                 newMainImageUrl = "/uploads/properties/main/" + fileName;
             }
 
-            // Update property data
+
             imovel.setTitulo(titulo);
             imovel.setDescricao(descricao);
             imovel.setPrecoMzn(precoMzn);
@@ -203,7 +203,7 @@ public class ImovelController {
         }
     }
 
-    // ============ CONSULTAS ==============
+
 
     @GetMapping("/listar")
     @Operation(summary = "Listar imóveis", description = "Lista todos registros de imóveis disponíveis")
@@ -219,7 +219,7 @@ public class ImovelController {
         return ResponseEntity.ok(imoveis);
     }
 
-    // ============ MÉTODOS AUXILIARES ==============
+
 
     private void validateImageFile(MultipartFile file) {
         String contentType = file.getContentType();

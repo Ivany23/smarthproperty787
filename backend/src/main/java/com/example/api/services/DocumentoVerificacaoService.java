@@ -39,18 +39,18 @@ public class DocumentoVerificacaoService {
 
         Anunciante anunciante = anuncianteOpt.get();
 
-        // Save file
+
         String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
         Path filePath = Paths.get(UPLOAD_DIR + fileName);
         Files.createDirectories(filePath.getParent());
         Files.write(filePath, file.getBytes());
 
-        // Create entity
+
         DocumentoVerificacao documento = new DocumentoVerificacao();
         documento.setAnunciante(anunciante);
         documento.setTipoDocumento(tipoDocumento);
         documento.setDocumentoUrl("/uploads/documents/" + fileName);
-        documento.setVerificado(true); 
+        documento.setVerificado(true);
 
         return documentoRepository.save(documento);
     }
@@ -81,13 +81,13 @@ public class DocumentoVerificacaoService {
         DocumentoVerificacao documento = documentoOpt.get();
         documento.setTipoDocumento(tipoDocumento);
 
-        // Only update file if a new one is provided
+
         if (file != null && !file.isEmpty()) {
-            // Delete old file
+
             Path oldFilePath = Paths.get(UPLOAD_DIR + documento.getDocumentoUrl().substring("/uploads/documents/".length()));
             Files.deleteIfExists(oldFilePath);
 
-            // Save new file
+
             String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
             Path filePath = Paths.get(UPLOAD_DIR + fileName);
             Files.write(filePath, file.getBytes());
@@ -109,12 +109,12 @@ public class DocumentoVerificacaoService {
 
         DocumentoVerificacao documento = documentoOpt.get();
 
-        // Delete file
+
         Path filePath = Paths.get(UPLOAD_DIR + documento.getDocumentoUrl().substring("/uploads/documents/".length()));
         try {
             Files.deleteIfExists(filePath);
         } catch (IOException e) {
-            // Log error but continue
+
         }
 
         documentoRepository.delete(documento);

@@ -24,7 +24,7 @@ public class AuthService {
         String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         StringBuilder code = new StringBuilder();
         Random rnd = new Random();
-        while (code.length() < 8) { 
+        while (code.length() < 8) {
             int index = (int) (rnd.nextFloat() * chars.length());
             code.append(chars.charAt(index));
         }
@@ -71,7 +71,7 @@ public class AuthService {
         Map<String, Object> response = new HashMap<>();
         response.put("message", "Login bem-sucedido");
         response.put("visitanteId", visitante.getId());
-        
+
         return response;
     }
 }

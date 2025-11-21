@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/constants/colors.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'dart:html' as html;
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -27,11 +26,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     super.dispose();
   }
 
-  String _getApiUrl() {
-    final uri = Uri.parse(html.window.location.href);
-    return '${uri.scheme}://${uri.host.replaceAll(uri.port.toString(), '8080')}/api/auth/register';
-  }
-
   Future<void> _signUp() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -47,9 +41,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
 
     try {
-      final String apiUrl = _getApiUrl();
       final response = await http.post(
-        Uri.parse(apiUrl),
+        Uri.parse('http://localhost:8080/api/auth/register'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
         },

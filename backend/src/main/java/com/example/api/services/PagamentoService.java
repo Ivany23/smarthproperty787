@@ -41,26 +41,35 @@ public class PagamentoService {
 
         Visitante visitante = visitanteOpt.get();
 
-        Optional<Anunciante> anuncianteOpt = anuncianteRepository.findByVisitante(visitante);
+        // Tentar buscar por ID do visitante para ser mais seguro
+        Optional<Anunciante> anuncianteOpt = anuncianteRepository.findByVisitanteId(visitanteId);
         Anunciante anunciante;
-        if (anuncianteOpt.isEmpty()) {
-            anunciante = new Anunciante();
-            anunciante.setVisitante(visitante);
-            anunciante.setTipoConta("PESSOAL");
-            anunciante.setVerificado(false);
-            anunciante = anuncianteRepository.save(anunciante);
 
-            Credito credito = new Credito();
-            credito.setAnunciante(anunciante);
-            credito.setSaldo(BigDecimal.ZERO);
-            creditoRepository.save(credito);
+        if (anuncianteOpt.isEmpty()) {
+            try {
+                anunciante = new Anunciante();
+                anunciante.setVisitante(visitante);
+                anunciante.setTipoConta("PESSOAL");
+                anunciante.setVerificado(false);
+                anunciante = anuncianteRepository.save(anunciante);
+
+                Credito credito = new Credito();
+                credito.setAnunciante(anunciante);
+                credito.setSaldo(BigDecimal.ZERO);
+                creditoRepository.save(credito);
+            } catch (org.springframework.dao.DataIntegrityViolationException e) {
+                // Se falhar por constraint (já existe), tenta buscar novamente
+                anunciante = anuncianteRepository.findByVisitanteId(visitanteId)
+                        .orElseThrow(() -> new RuntimeException("Erro ao recuperar anunciante existente"));
+            }
         } else {
             anunciante = anuncianteOpt.get();
         }
 
         int creditosAdquiridos = valor.intValue();
 
-        String referenciaGerada = "MZ" + metodoPagamento.substring(0, 2).toUpperCase() + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        String referenciaGerada = "MZ" + metodoPagamento.substring(0, 2).toUpperCase()
+                + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 
         Pagamento pagamento = new Pagamento();
         pagamento.setAnunciante(anunciante);

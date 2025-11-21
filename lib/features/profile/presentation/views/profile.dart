@@ -62,17 +62,25 @@ class _ProfileViewState extends State<ProfileView> {
           _anuncianteId = anuncianteId;
           _isVerified = data['verificado'] ?? false;
         });
+        // Só carregar créditos e documentos se for anunciante
         await _loadCredits(anuncianteId);
         await _checkDocuments(anuncianteId);
       } else if (response.statusCode == 404) {
+        // Não é anunciante - não chamar outros endpoints
         setState(() {
           _isAdvertiser = false;
+          _anuncianteId = 0;
+          _hasDocuments = false;
+          _isVerified = false;
         });
       }
     } catch (e) {
       print('Erro ao verificar status de anunciante: $e');
       setState(() {
         _isAdvertiser = false;
+        _anuncianteId = 0;
+        _hasDocuments = false;
+        _isVerified = false;
       });
     }
   }
@@ -214,12 +222,16 @@ class _ProfileViewState extends State<ProfileView> {
                   _buildProfileIcon(
                     icon: Icons.person_add,
                     label: 'Tornar-se Anunciante',
-                    onTap: () {
-                      Navigator.of(context).push(
+                    onTap: () async {
+                      final result = await Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (context) => const BecomeAdvertiserScreen(),
                         ),
                       );
+                      // Se retornou true, recarregar dados
+                      if (result == true) {
+                        _loadVisitorData();
+                      }
                     },
                   ),
                 if (_isAdvertiser)
@@ -234,43 +246,47 @@ class _ProfileViewState extends State<ProfileView> {
                       );
                     },
                   ),
-                _hasDocuments
-                    ? InkWell(
-                        onTap: () async {
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const IdentityVerificationScreen(),
+                // Verificação de Identidade - SOMENTE para anunciantes
+                if (_isAdvertiser)
+                  _hasDocuments
+                      ? InkWell(
+                          onTap: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const IdentityVerificationScreen(),
+                              ),
+                            );
+                            // Recarregar documentos
+                            if (_anuncianteId > 0) {
+                              _checkDocuments(_anuncianteId);
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            child: Icon(
+                              _isVerified ? Icons.verified : Icons.pending,
+                              size: 40,
+                              color: _isVerified ? Colors.green : Colors.orange,
                             ),
-                          );
-                          if (_isAdvertiser) {
-                            _checkDocuments(_anuncianteId);
-                          }
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          child: Icon(
-                            _isVerified ? Icons.verified : Icons.pending,
-                            size: 40,
-                            color: _isVerified ? Colors.green : Colors.orange,
                           ),
+                        )
+                      : _buildProfileIcon(
+                          icon: Icons.verified_user,
+                          label: 'Verificar Identidade',
+                          onTap: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const IdentityVerificationScreen(),
+                              ),
+                            );
+                            // Recarregar documentos
+                            if (_anuncianteId > 0) {
+                              _checkDocuments(_anuncianteId);
+                            }
+                          },
                         ),
-                      )
-                    : _buildProfileIcon(
-                        icon: Icons.verified_user,
-                        label: 'Verificar Identidade',
-                        onTap: () async {
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const IdentityVerificationScreen(),
-                            ),
-                          );
-                          if (_isAdvertiser) {
-                            _checkDocuments(_anuncianteId);
-                          }
-                        },
-                      ),
               ],
             ),
             const SizedBox(height: 40),

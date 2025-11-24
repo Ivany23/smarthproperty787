@@ -1,6 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/services/marcacao_service.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 
 class MinhasMarcacoesScreen extends StatefulWidget {
   const MinhasMarcacoesScreen({Key? key}) : super(key: key);
@@ -13,11 +16,58 @@ class _MinhasMarcacoesScreenState extends State<MinhasMarcacoesScreen> {
   final _marcacaoService = MarcacaoService();
   List<Map<String, dynamic>> _marcacoes = [];
   bool _isLoading = true;
+  bool _isAnunciante = false;
+  int? _anuncianteId;
+  Map<int, Map<String, dynamic>> _imoveisCache = {};
 
   @override
   void initState() {
     super.initState();
+    _verificarTipoUsuario();
     _carregarMarcacoes();
+  }
+
+  Future<void> _verificarTipoUsuario() async {
+    final prefs = await SharedPreferences.getInstance();
+    final anuncianteId = prefs.getInt('anuncianteId');
+    setState(() {
+      _isAnunciante = anuncianteId != null;
+      _anuncianteId = anuncianteId;
+    });
+    print(
+      '👤 Tipo de usuário: ${_isAnunciante ? "Anunciante" : "Visitante"} (ID: $anuncianteId)',
+    );
+  }
+
+  Future<Map<String, dynamic>?> _buscarImovel(int idImovel) async {
+    if (_imoveisCache.containsKey(idImovel)) {
+      return _imoveisCache[idImovel];
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse('http://localhost:8080/api/imovel/buscar/$idImovel'),
+      );
+
+      if (response.statusCode == 200) {
+        final imovel = json.decode(response.body);
+        _imoveisCache[idImovel] = imovel;
+        return imovel;
+      }
+    } catch (e) {
+      print('❌ Erro ao buscar imóvel: $e');
+    }
+    return null;
+  }
+
+  Future<bool> _souDonoDoImovel(int idImovel) async {
+    if (!_isAnunciante || _anuncianteId == null) return false;
+
+    final imovel = await _buscarImovel(idImovel);
+    if (imovel == null) return false;
+
+    final idAnuncianteImovel = imovel['idAnunciante'];
+    return idAnuncianteImovel == _anuncianteId;
   }
 
   Future<void> _carregarMarcacoes() async {
@@ -89,6 +139,57 @@ class _MinhasMarcacoesScreenState extends State<MinhasMarcacoesScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Erro ao cancelar marcação'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _confirmarMarcacao(int idMarcacao) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Confirmar Marcação'),
+        content: const Text('Deseja confirmar esta marcação de visita?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Não'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text('Sim, Confirmar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final success = await _marcacaoService.confirmarMarcacao(idMarcacao);
+      if (success) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Marcação confirmada com sucesso'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          _carregarMarcacoes();
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Erro ao confirmar marcação'),
               backgroundColor: Colors.red,
             ),
           );
@@ -231,7 +332,6 @@ class _MinhasMarcacoesScreenState extends State<MinhasMarcacoesScreen> {
                     ),
                     child: Column(
                       children: [
-                        // Header com status
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
@@ -268,14 +368,11 @@ class _MinhasMarcacoesScreenState extends State<MinhasMarcacoesScreen> {
                             ],
                           ),
                         ),
-
-                        // Conteúdo
                         Padding(
                           padding: const EdgeInsets.all(16),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Data e hora
                               Row(
                                 children: [
                                   Container(
@@ -318,7 +415,6 @@ class _MinhasMarcacoesScreenState extends State<MinhasMarcacoesScreen> {
                                   ),
                                 ],
                               ),
-
                               if (marcacao['observacoes'] != null &&
                                   marcacao['observacoes']
                                       .toString()
@@ -353,32 +449,109 @@ class _MinhasMarcacoesScreenState extends State<MinhasMarcacoesScreen> {
                                   ),
                                 ),
                               ],
-
-                              // Botão de cancelar (apenas se não estiver cancelada)
                               if (status != 'CANCELADA' &&
                                   status != 'CONCLUIDA') ...[
                                 const SizedBox(height: 16),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: OutlinedButton.icon(
-                                    onPressed: () =>
-                                        _cancelarMarcacao(marcacao['id']),
-                                    icon: const Icon(
-                                      Icons.cancel_outlined,
-                                      size: 20,
-                                    ),
-                                    label: const Text('Cancelar Marcação'),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: Colors.red,
-                                      side: const BorderSide(color: Colors.red),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 12,
-                                      ),
-                                    ),
+                                FutureBuilder<bool>(
+                                  future: _souDonoDoImovel(
+                                    marcacao['idImovel'],
                                   ),
+                                  builder: (context, snapshot) {
+                                    final souDono = snapshot.data ?? false;
+
+                                    if (souDono && status == 'PENDENTE') {
+                                      return Column(
+                                        children: [
+                                          SizedBox(
+                                            width: double.infinity,
+                                            child: ElevatedButton.icon(
+                                              onPressed: () =>
+                                                  _confirmarMarcacao(
+                                                    marcacao['id'],
+                                                  ),
+                                              icon: const Icon(
+                                                Icons.check_circle_outline,
+                                                size: 20,
+                                              ),
+                                              label: const Text(
+                                                'Confirmar Marcação',
+                                              ),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.green,
+                                                foregroundColor: Colors.white,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
+                                                ),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 12,
+                                                    ),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          SizedBox(
+                                            width: double.infinity,
+                                            child: OutlinedButton.icon(
+                                              onPressed: () =>
+                                                  _cancelarMarcacao(
+                                                    marcacao['id'],
+                                                  ),
+                                              icon: const Icon(
+                                                Icons.cancel_outlined,
+                                                size: 20,
+                                              ),
+                                              label: const Text(
+                                                'Recusar Marcação',
+                                              ),
+                                              style: OutlinedButton.styleFrom(
+                                                foregroundColor: Colors.red,
+                                                side: const BorderSide(
+                                                  color: Colors.red,
+                                                ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
+                                                ),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 12,
+                                                    ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    }
+
+                                    return SizedBox(
+                                      width: double.infinity,
+                                      child: OutlinedButton.icon(
+                                        onPressed: () =>
+                                            _cancelarMarcacao(marcacao['id']),
+                                        icon: const Icon(
+                                          Icons.cancel_outlined,
+                                          size: 20,
+                                        ),
+                                        label: const Text('Cancelar Marcação'),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: Colors.red,
+                                          side: const BorderSide(
+                                            color: Colors.red,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 12,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 ),
                               ],
                             ],

@@ -7,6 +7,7 @@ import 'package:flutter_application_1/core/constants/colors.dart';
 import 'package:flutter_application_1/core/shared/widgets/custom_input.dart';
 import 'package:flutter_application_1/core/shared/widgets/favorite_button.dart';
 import 'package:flutter_application_1/features/home/presentation/views/offers_details.dart';
+import 'package:flutter_application_1/features/home/presentation/views/minhas_marcacoes_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
@@ -97,6 +98,22 @@ class _OffersViewState extends State<OffersView> {
           ),
         ),
         actions: [
+          InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MinhasMarcacoesScreen(),
+                ),
+              );
+            },
+            child: const Icon(
+              Icons.event_note_rounded,
+              color: Colors.black87,
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: 16),
           InkWell(
             onTap: () {},
             child: const Icon(

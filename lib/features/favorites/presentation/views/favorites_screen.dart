@@ -334,12 +334,48 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                                 SizedBox(height: 8),
                                 // Preço
                                 Text(
-                                  '${imovel['preco'] ?? '0'} MT',
+                                  'MZN ${imovel['precoMzn'] ?? '0'}',
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.green[700],
                                   ),
+                                ),
+                                SizedBox(height: 8),
+                                // Detalhes com ícones
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.category,
+                                      size: 14,
+                                      color: Colors.grey[600],
+                                    ),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      imovel['categoria'] ?? 'Casa',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                    if (imovel['area'] != null &&
+                                        imovel['area'] > 0) ...[
+                                      SizedBox(width: 12),
+                                      Icon(
+                                        Icons.square_foot,
+                                        size: 14,
+                                        color: Colors.grey[600],
+                                      ),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        '${imovel['area']}m²',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
+                                  ],
                                 ),
                               ],
                             ),

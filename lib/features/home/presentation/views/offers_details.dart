@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_application_1/features/home/presentation/views/criar_marcacao_screen.dart';
 
 class OfferDetails extends StatefulWidget {
   final int? imovelId;
@@ -454,7 +455,19 @@ class _OfferDetailsState extends State<OfferDetails> {
           ],
         ),
         child: ElevatedButton(
-          onPressed: () {},
+          onPressed: widget.imovelId != null
+              ? () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CriarMarcacaoScreen(
+                        idImovel: widget.imovelId!,
+                        tituloImovel: widget.titulo,
+                      ),
+                    ),
+                  );
+                }
+              : null,
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.black,
             padding: const EdgeInsets.symmetric(vertical: 16),

@@ -242,7 +242,7 @@ class _CriarMarcacaoScreenState extends State<CriarMarcacaoScreen> {
                     ),
                     child: const Icon(
                       Icons.home_rounded,
-                      color: Color(0xFF2563EB),
+                      color: Colors.black87,
                       size: 28,
                     ),
                   ),
@@ -298,7 +298,7 @@ class _CriarMarcacaoScreenState extends State<CriarMarcacaoScreen> {
                       ),
                       child: const Icon(
                         Icons.calendar_today_rounded,
-                        color: Color(0xFF2563EB),
+                        color: Colors.black87,
                         size: 20,
                       ),
                     ),
@@ -348,7 +348,7 @@ class _CriarMarcacaoScreenState extends State<CriarMarcacaoScreen> {
                             ),
                             child: const Icon(
                               Icons.access_time_rounded,
-                              color: Color(0xFF10B981),
+                              color: Colors.black87,
                               size: 20,
                             ),
                           ),
@@ -403,7 +403,7 @@ class _CriarMarcacaoScreenState extends State<CriarMarcacaoScreen> {
                             ),
                             child: const Icon(
                               Icons.access_time_filled_rounded,
-                              color: Color(0xFFEF4444),
+                              color: Colors.black87,
                               size: 20,
                             ),
                           ),

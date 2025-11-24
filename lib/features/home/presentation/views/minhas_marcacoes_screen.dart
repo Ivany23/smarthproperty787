@@ -169,9 +169,7 @@ class _MinhasMarcacoesScreenState extends State<MinhasMarcacoesScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFF2563EB)),
-            )
+          ? const Center(child: CircularProgressIndicator(color: Colors.black))
           : _marcacoes.isEmpty
           ? Center(
               child: Column(
@@ -180,13 +178,13 @@ class _MinhasMarcacoesScreenState extends State<MinhasMarcacoesScreen> {
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF2563EB).withOpacity(0.1),
+                      color: Colors.grey.shade100,
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
                       Icons.event_busy_rounded,
                       size: 64,
-                      color: Color(0xFF2563EB),
+                      color: Colors.black87,
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -208,7 +206,7 @@ class _MinhasMarcacoesScreenState extends State<MinhasMarcacoesScreen> {
             )
           : RefreshIndicator(
               onRefresh: _carregarMarcacoes,
-              color: const Color(0xFF2563EB),
+              color: Colors.black,
               child: ListView.builder(
                 padding: const EdgeInsets.all(16),
                 itemCount: _marcacoes.length,
@@ -247,16 +245,16 @@ class _MinhasMarcacoesScreenState extends State<MinhasMarcacoesScreen> {
                             children: [
                               Icon(
                                 _getStatusIcon(status),
-                                color: _getStatusColor(status),
+                                color: Colors.black87,
                                 size: 24,
                               ),
                               const SizedBox(width: 8),
                               Text(
                                 _getStatusText(status),
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
-                                  color: _getStatusColor(status),
+                                  color: Colors.black87,
                                 ),
                               ),
                               const Spacer(),
@@ -283,14 +281,12 @@ class _MinhasMarcacoesScreenState extends State<MinhasMarcacoesScreen> {
                                   Container(
                                     padding: const EdgeInsets.all(10),
                                     decoration: BoxDecoration(
-                                      color: const Color(
-                                        0xFF2563EB,
-                                      ).withOpacity(0.1),
+                                      color: Colors.grey.shade100,
                                       borderRadius: BorderRadius.circular(10),
                                     ),
                                     child: const Icon(
                                       Icons.calendar_today_rounded,
-                                      color: Color(0xFF2563EB),
+                                      color: Colors.black87,
                                       size: 20,
                                     ),
                                   ),
@@ -340,7 +336,7 @@ class _MinhasMarcacoesScreenState extends State<MinhasMarcacoesScreen> {
                                     children: [
                                       const Icon(
                                         Icons.notes_rounded,
-                                        color: Colors.grey,
+                                        color: Colors.black54,
                                         size: 20,
                                       ),
                                       const SizedBox(width: 8),

@@ -629,23 +629,32 @@ class _EditarImovelScreenState extends State<EditarImovelScreen>
       text: widget.imovel['area']?.toString() ?? '0',
     );
 
+    // Função auxiliar para Title Case
+    String toTitleCase(String text) {
+      if (text.isEmpty) return text;
+      return text[0].toUpperCase() + text.substring(1).toLowerCase();
+    }
+
     // Normalizar categoria
     final categoriaFromBackend =
-        widget.imovel['categoria']?.toString().toUpperCase() ?? 'APARTAMENTO';
-    final categoriasValidas = [
-      'APARTAMENTO',
-      'CASA',
-      'TERRENO',
-      'COMERCIAL',
-      'OUTRO',
-    ];
-    _categoria = categoriasValidas.contains(categoriaFromBackend)
-        ? categoriaFromBackend
-        : 'APARTAMENTO';
+        widget.imovel['categoria']?.toString() ?? 'Apartamento';
+    final categoriaNormalizada = toTitleCase(categoriaFromBackend);
 
-    // Normalizar finalidade
+    final categoriasValidas = [
+      'Apartamento',
+      'Casa',
+      'Terreno',
+      'Comercial',
+      'Outro',
+    ];
+    _categoria = categoriasValidas.contains(categoriaNormalizada)
+        ? categoriaNormalizada
+        : 'Apartamento';
+
+    // Normalizar finalidade (Banco exige UPPERCASE)
     final finalidadeFromBackend =
         widget.imovel['finalidade']?.toString().toUpperCase() ?? 'VENDA';
+
     final finalidadesValidas = ['VENDA', 'ARRENDAMENTO'];
     _finalidade = finalidadesValidas.contains(finalidadeFromBackend)
         ? finalidadeFromBackend
@@ -709,6 +718,21 @@ class _EditarImovelScreenState extends State<EditarImovelScreen>
     }
   }
 
+  String _formatNumberForBackend(String value) {
+    if (value.isEmpty) return '0';
+    // Remove tudo que não for dígito, ponto ou vírgula
+    String cleaned = value.replaceAll(RegExp(r'[^0-9.,]'), '');
+
+    // Se tiver vírgula, assume que é decimal
+    if (cleaned.contains(',')) {
+      // Remove pontos de milhar (ex: 1.000,00 -> 1000,00)
+      cleaned = cleaned.replaceAll('.', '');
+      // Troca vírgula por ponto
+      cleaned = cleaned.replaceAll(',', '.');
+    }
+    return cleaned;
+  }
+
   Future<void> _atualizarImovel() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -726,10 +750,17 @@ class _EditarImovelScreenState extends State<EditarImovelScreen>
 
       request.fields['titulo'] = _tituloController.text;
       request.fields['descricao'] = _descricaoController.text;
-      request.fields['precoMzn'] = _precoController.text;
-      request.fields['area'] = _areaController.text;
+
+      // Formatar números para o formato aceito pelo backend (BigDecimal com ponto)
+      request.fields['precoMzn'] = _formatNumberForBackend(
+        _precoController.text,
+      );
+      request.fields['area'] = _formatNumberForBackend(_areaController.text);
+
       request.fields['categoria'] = _categoria;
       request.fields['finalidade'] = _finalidade;
+
+      print('Enviando dados: ${request.fields}'); // Log para debug
 
       final response = await request.send();
 
@@ -1003,11 +1034,11 @@ class _EditarImovelScreenState extends State<EditarImovelScreen>
             value: _categoria,
             icon: Icons.category_outlined,
             items: const [
-              'APARTAMENTO',
-              'CASA',
-              'TERRENO',
-              'COMERCIAL',
-              'OUTRO',
+              'Apartamento',
+              'Casa',
+              'Terreno',
+              'Comercial',
+              'Outro',
             ],
             onChanged: (value) {
               setState(() {

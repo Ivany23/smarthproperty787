@@ -29,9 +29,8 @@ public class ImovelService {
     private static final String MAIN_IMAGES_DIR = "backend/uploads/properties/main/";
     private static final String GALLERY_IMAGES_DIR = "backend/uploads/properties/gallery/";
 
-
     private static final String[] ALLOWED_IMAGE_TYPES = {
-        "image/jpeg", "image/jpg", "image/png", "image/gif", "image/bmp", "image/webp"
+            "image/jpeg", "image/jpg", "image/png", "image/gif", "image/bmp", "image/webp"
     };
 
     @Autowired
@@ -45,21 +44,18 @@ public class ImovelService {
 
     @Transactional
     public Imovel criarImovel(String titulo, String descricao, BigDecimal precoMzn,
-                            BigDecimal area, String finalidade, String categoria,
-                            Long idAnunciante, MultipartFile imagemPrincipal,
-                            List<MultipartFile> imagensGaleria) throws IOException {
-
+            BigDecimal area, String finalidade, String categoria,
+            Long idAnunciante, MultipartFile imagemPrincipal,
+            List<MultipartFile> imagensGaleria) throws IOException {
 
         Optional<Anunciante> anuncianteOpt = anuncianteRepository.findById(idAnunciante);
         if (anuncianteOpt.isEmpty()) {
             throw new RuntimeException("Anunciante não encontrado");
         }
 
-
         if (imagemPrincipal != null) {
             validateImageFile(imagemPrincipal);
         }
-
 
         if (imagensGaleria != null) {
             for (MultipartFile imagem : imagensGaleria) {
@@ -67,10 +63,8 @@ public class ImovelService {
             }
         }
 
-
         Files.createDirectories(Paths.get(MAIN_IMAGES_DIR));
         Files.createDirectories(Paths.get(GALLERY_IMAGES_DIR));
-
 
         String mainImageUrl = null;
         if (imagemPrincipal != null && !imagemPrincipal.isEmpty()) {
@@ -79,7 +73,6 @@ public class ImovelService {
             Files.write(filePath, imagemPrincipal.getBytes());
             mainImageUrl = "/uploads/properties/main/" + fileName;
         }
-
 
         Imovel imovel = new Imovel();
         imovel.setTitulo(titulo);
@@ -94,7 +87,6 @@ public class ImovelService {
         imovel.setCategoria(categoria);
 
         Imovel savedImovel = imovelRepository.save(imovel);
-
 
         if (imagensGaleria != null && !imagensGaleria.isEmpty()) {
             for (int i = 0; i < imagensGaleria.size(); i++) {
@@ -118,8 +110,8 @@ public class ImovelService {
 
     @Transactional
     public Imovel atualizarImovel(Long id, String titulo, String descricao, BigDecimal precoMzn,
-                                BigDecimal area, String finalidade, String categoria,
-                                MultipartFile imagemPrincipal, List<MultipartFile> imagensGaleria) throws IOException {
+            BigDecimal area, String finalidade, String categoria,
+            MultipartFile imagemPrincipal, List<MultipartFile> imagensGaleria) throws IOException {
 
         Optional<Imovel> imovelOpt = imovelRepository.findById(id);
         if (imovelOpt.isEmpty()) {
@@ -127,7 +119,6 @@ public class ImovelService {
         }
 
         Imovel imovel = imovelOpt.get();
-
 
         if (imagemPrincipal != null) {
             validateImageFile(imagemPrincipal);
@@ -138,21 +129,19 @@ public class ImovelService {
             }
         }
 
-
         if (imagemPrincipal != null && !imagemPrincipal.isEmpty()) {
 
             if (imovel.getImagemPrincipalUrl() != null) {
-                Path oldPath = Paths.get(MAIN_IMAGES_DIR + imovel.getImagemPrincipalUrl().substring("/uploads/properties/main/".length()));
+                Path oldPath = Paths.get(MAIN_IMAGES_DIR
+                        + imovel.getImagemPrincipalUrl().substring("/uploads/properties/main/".length()));
                 Files.deleteIfExists(oldPath);
             }
-
 
             String fileName = UUID.randomUUID().toString() + "_main_" + imagemPrincipal.getOriginalFilename();
             Path filePath = Paths.get(MAIN_IMAGES_DIR + fileName);
             Files.write(filePath, imagemPrincipal.getBytes());
             imovel.setImagemPrincipalUrl("/uploads/properties/main/" + fileName);
         }
-
 
         imovel.setTitulo(titulo);
         imovel.setDescricao(descricao);
@@ -162,7 +151,6 @@ public class ImovelService {
         imovel.setCategoria(categoria);
 
         Imovel savedImovel = imovelRepository.save(imovel);
-
 
         if (imagensGaleria != null && !imagensGaleria.isEmpty()) {
             Long currentCount = imagemRepository.countByImovel(id);
@@ -194,8 +182,8 @@ public class ImovelService {
 
         ImovelImagem imagem = imagemOpt.get();
 
-
-        Path filePath = Paths.get(GALLERY_IMAGES_DIR + imagem.getImagemUrl().substring("/uploads/properties/gallery/".length()));
+        Path filePath = Paths
+                .get(GALLERY_IMAGES_DIR + imagem.getImagemUrl().substring("/uploads/properties/gallery/".length()));
         try {
             Files.deleteIfExists(filePath);
         } catch (IOException e) {
@@ -203,7 +191,6 @@ public class ImovelService {
         }
 
         imagemRepository.delete(imagem);
-
 
         reorderGalleryImages(imagem.getIdImovel());
     }
@@ -224,9 +211,9 @@ public class ImovelService {
 
         Imovel imovel = imovelOpt.get();
 
-
         if (imovel.getImagemPrincipalUrl() != null) {
-            Path mainPath = Paths.get(MAIN_IMAGES_DIR + imovel.getImagemPrincipalUrl().substring("/uploads/properties/main/".length()));
+            Path mainPath = Paths.get(
+                    MAIN_IMAGES_DIR + imovel.getImagemPrincipalUrl().substring("/uploads/properties/main/".length()));
             try {
                 Files.deleteIfExists(mainPath);
             } catch (IOException e) {
@@ -234,17 +221,16 @@ public class ImovelService {
             }
         }
 
-
         List<ImovelImagem> imagens = imagemRepository.findByImovelOrderByOrdemAsc(id);
         for (ImovelImagem imagem : imagens) {
-            Path imagePath = Paths.get(GALLERY_IMAGES_DIR + imagem.getImagemUrl().substring("/uploads/properties/gallery/".length()));
+            Path imagePath = Paths
+                    .get(GALLERY_IMAGES_DIR + imagem.getImagemUrl().substring("/uploads/properties/gallery/".length()));
             try {
                 Files.deleteIfExists(imagePath);
             } catch (IOException e) {
 
             }
         }
-
 
         imagemRepository.deleteByImovel(id);
         imovelRepository.delete(imovel);
@@ -292,7 +278,6 @@ public class ImovelService {
             imagemRepository.save(imagens.get(i));
         }
     }
-
 
     public Imovel save(Imovel imovel) {
         return imovelRepository.save(imovel);

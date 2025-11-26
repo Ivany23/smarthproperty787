@@ -143,37 +143,7 @@ class _OffersViewState extends State<OffersView> {
                   isPassword: false,
                 ),
                 const SizedBox(height: 30),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: quickOptions.map((element) {
-                    return Container(
-                      height: 75,
-                      width: 75,
-                      decoration: BoxDecoration(
-                        boxShadow: const [
-                          BoxShadow(
-                            offset: Offset(0, 4),
-                            blurRadius: 10,
-                            color: Colors.black12,
-                          ),
-                        ],
-                        borderRadius: BorderRadius.circular(10),
-                        color: Colors.white,
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Image(
-                            image: AssetImage(AppIcons.rent),
-                            width: 30,
-                          ),
-                          Text(element),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 30),
+
                 if (_isLoading)
                   const Center(
                     child: Padding(

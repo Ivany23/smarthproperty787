@@ -13,30 +13,9 @@ class PublishProperty extends StatefulWidget {
 }
 
 class _PublishPropertyState extends State<PublishProperty> {
-  int _currentStep = 0;
-  bool _isLoading = false;
   bool _isAdvertiser = false;
   int? _anuncianteId;
   double _credits = 0.0;
-
-  // Etapa 1: Dados do Imóvel
-  final _tituloController = TextEditingController();
-  final _descricaoController = TextEditingController();
-  final _precoController = TextEditingController();
-  final _areaController = TextEditingController();
-  String _finalidade = 'VENDA';
-  String _categoria = 'Casa';
-  XFile? _imagemPrincipal;
-
-  // Etapa 2: Localização
-  final _paisController = TextEditingController(text: 'Moçambique');
-  final _provinciaController = TextEditingController();
-  final _cidadeController = TextEditingController();
-  final _bairroController = TextEditingController();
-
-  // Etapa 3: Documento do Imóvel
-  XFile? _documentoImovel;
-  String _tipoDocumento = 'ESCRITURA';
 
   @override
   void initState() {
@@ -97,12 +76,61 @@ class _PublishPropertyState extends State<PublishProperty> {
             'Créditos insuficientes. Necessário: 50, Disponível: ${_credits.toStringAsFixed(0)}',
           );
           Navigator.pop(context);
+        } else {
+          // Navegar para a primeira tela
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PublishStep1Screen(
+                anuncianteId: _anuncianteId!,
+                credits: _credits,
+              ),
+            ),
+          );
         }
       }
     } catch (e) {
       print('Erro ao carregar créditos: $e');
     }
   }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: CircularProgressIndicator(color: Colors.black87)),
+    );
+  }
+}
+
+class PublishStep1Screen extends StatefulWidget {
+  final int anuncianteId;
+  final double credits;
+
+  const PublishStep1Screen({
+    super.key,
+    required this.anuncianteId,
+    required this.credits,
+  });
+
+  @override
+  State<PublishStep1Screen> createState() => _PublishStep1ScreenState();
+}
+
+class _PublishStep1ScreenState extends State<PublishStep1Screen> {
+  final _formKey = GlobalKey<FormState>();
+  final _tituloController = TextEditingController();
+  final _descricaoController = TextEditingController();
+  final _precoController = TextEditingController();
+  final _areaController = TextEditingController();
+  String _finalidade = 'VENDA';
+  String _categoria = 'Casa';
+  XFile? _imagemPrincipal;
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
@@ -115,6 +143,730 @@ class _PublishPropertyState extends State<PublishProperty> {
     }
   }
 
+  void _continuar() {
+    if (!_formKey.currentState!.validate()) return;
+
+    if (_tituloController.text.isEmpty ||
+        _precoController.text.isEmpty ||
+        _areaController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Preencha todos os campos obrigatórios'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PublishStep2Screen(
+          anuncianteId: widget.anuncianteId,
+          credits: widget.credits,
+          titulo: _tituloController.text,
+          descricao: _descricaoController.text,
+          preco: _precoController.text,
+          area: _areaController.text,
+          finalidade: _finalidade,
+          categoria: _categoria,
+          imagemPrincipal: _imagemPrincipal,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F5F5),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'Dados do Imóvel',
+          style: TextStyle(
+            color: Colors.black87,
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(60),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            color: Colors.white,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.black87,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Container(
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Container(
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      body: Form(
+        key: _formKey,
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Card de créditos
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Colors.purple.shade50, Colors.blue.shade50],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.purple.shade100),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              Icons.account_balance_wallet,
+                              color: Colors.purple.shade600,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Saldo Disponível',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.black54,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${widget.credits.toStringAsFixed(0)} créditos',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.purple.shade700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  size: 14,
+                                  color: Colors.orange.shade700,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Custo: 50',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.orange.shade700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Campos do formulário
+                    _buildTextField(
+                      controller: _tituloController,
+                      label: 'Título *',
+                      icon: Icons.title,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Campo obrigatório';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      controller: _descricaoController,
+                      label: 'Descrição',
+                      icon: Icons.description,
+                      maxLines: 4,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      controller: _precoController,
+                      label: 'Preço (MZN) *',
+                      icon: Icons.attach_money,
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Campo obrigatório';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      controller: _areaController,
+                      label: 'Área (m²) *',
+                      icon: Icons.square_foot,
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Campo obrigatório';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    _buildDropdown(
+                      label: 'Finalidade',
+                      value: _finalidade,
+                      icon: Icons.business_center,
+                      items: const ['VENDA', 'ARRENDAMENTO'],
+                      onChanged: (value) =>
+                          setState(() => _finalidade = value!),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildDropdown(
+                      label: 'Categoria',
+                      value: _categoria,
+                      icon: Icons.home,
+                      items: const [
+                        'Casa',
+                        'Apartamento',
+                        'Terreno',
+                        'Comercial',
+                      ],
+                      onChanged: (value) => setState(() => _categoria = value!),
+                    ),
+                    const SizedBox(height: 24),
+                    _buildImagePicker(),
+                  ],
+                ),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _continuar,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black87,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    'Continuar',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    int maxLines = 1,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      maxLines: maxLines,
+      keyboardType: keyboardType,
+      validator: validator,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, color: Colors.black87),
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.black87, width: 2),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDropdown({
+    required String label,
+    required String value,
+    required IconData icon,
+    required List<String> items,
+    required void Function(String?) onChanged,
+  }) {
+    return DropdownButtonFormField<String>(
+      value: value,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, color: Colors.black87),
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.black87, width: 2),
+        ),
+      ),
+      items: items.map((String item) {
+        return DropdownMenuItem<String>(value: item, child: Text(item));
+      }).toList(),
+      onChanged: onChanged,
+    );
+  }
+
+  Widget _buildImagePicker() {
+    return InkWell(
+      onTap: _pickImage,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: _imagemPrincipal != null
+                ? Colors.green.shade300
+                : Colors.grey.shade300,
+            width: 2,
+            style: BorderStyle.solid,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              _imagemPrincipal != null
+                  ? Icons.check_circle
+                  : Icons.add_photo_alternate,
+              size: 48,
+              color: _imagemPrincipal != null ? Colors.green : Colors.grey,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              _imagemPrincipal != null
+                  ? 'Imagem Selecionada'
+                  : 'Adicionar Imagem Principal',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: _imagemPrincipal != null ? Colors.green : Colors.black87,
+              ),
+            ),
+            if (_imagemPrincipal != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                _imagemPrincipal!.name,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _tituloController.dispose();
+    _descricaoController.dispose();
+    _precoController.dispose();
+    _areaController.dispose();
+    super.dispose();
+  }
+}
+
+class PublishStep2Screen extends StatefulWidget {
+  final int anuncianteId;
+  final double credits;
+  final String titulo;
+  final String descricao;
+  final String preco;
+  final String area;
+  final String finalidade;
+  final String categoria;
+  final XFile? imagemPrincipal;
+
+  const PublishStep2Screen({
+    super.key,
+    required this.anuncianteId,
+    required this.credits,
+    required this.titulo,
+    required this.descricao,
+    required this.preco,
+    required this.area,
+    required this.finalidade,
+    required this.categoria,
+    this.imagemPrincipal,
+  });
+
+  @override
+  State<PublishStep2Screen> createState() => _PublishStep2ScreenState();
+}
+
+class _PublishStep2ScreenState extends State<PublishStep2Screen> {
+  final _formKey = GlobalKey<FormState>();
+  final _paisController = TextEditingController(text: 'Moçambique');
+  final _provinciaController = TextEditingController();
+  final _cidadeController = TextEditingController();
+  final _bairroController = TextEditingController();
+
+  void _continuar() {
+    if (!_formKey.currentState!.validate()) return;
+
+    if (_provinciaController.text.isEmpty || _cidadeController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Preencha Província e Cidade'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PublishStep3Screen(
+          anuncianteId: widget.anuncianteId,
+          credits: widget.credits,
+          titulo: widget.titulo,
+          descricao: widget.descricao,
+          preco: widget.preco,
+          area: widget.area,
+          finalidade: widget.finalidade,
+          categoria: widget.categoria,
+          imagemPrincipal: widget.imagemPrincipal,
+          pais: _paisController.text,
+          provincia: _provinciaController.text,
+          cidade: _cidadeController.text,
+          bairro: _bairroController.text,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F5F5),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'Localização',
+          style: TextStyle(
+            color: Colors.black87,
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(60),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            color: Colors.white,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.black87,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Container(
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.black87,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Container(
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      body: Form(
+        key: _formKey,
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    _buildTextField(
+                      controller: _paisController,
+                      label: 'País',
+                      icon: Icons.public,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      controller: _provinciaController,
+                      label: 'Província *',
+                      icon: Icons.location_city,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Campo obrigatório';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      controller: _cidadeController,
+                      label: 'Cidade *',
+                      icon: Icons.location_on,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Campo obrigatório';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      controller: _bairroController,
+                      label: 'Bairro',
+                      icon: Icons.place,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _continuar,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black87,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    'Continuar',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      validator: validator,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, color: Colors.black87),
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.black87, width: 2),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _paisController.dispose();
+    _provinciaController.dispose();
+    _cidadeController.dispose();
+    _bairroController.dispose();
+    super.dispose();
+  }
+}
+
+class PublishStep3Screen extends StatefulWidget {
+  final int anuncianteId;
+  final double credits;
+  final String titulo;
+  final String descricao;
+  final String preco;
+  final String area;
+  final String finalidade;
+  final String categoria;
+  final XFile? imagemPrincipal;
+  final String pais;
+  final String provincia;
+  final String cidade;
+  final String bairro;
+
+  const PublishStep3Screen({
+    super.key,
+    required this.anuncianteId,
+    required this.credits,
+    required this.titulo,
+    required this.descricao,
+    required this.preco,
+    required this.area,
+    required this.finalidade,
+    required this.categoria,
+    this.imagemPrincipal,
+    required this.pais,
+    required this.provincia,
+    required this.cidade,
+    required this.bairro,
+  });
+
+  @override
+  State<PublishStep3Screen> createState() => _PublishStep3ScreenState();
+}
+
+class _PublishStep3ScreenState extends State<PublishStep3Screen> {
+  XFile? _documentoImovel;
+  String _tipoDocumento = 'ESCRITURA';
+  bool _isLoading = false;
+
   Future<void> _pickDocument() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
@@ -126,95 +878,84 @@ class _PublishPropertyState extends State<PublishProperty> {
     }
   }
 
-  Future<void> _submitStep() async {
-    // Etapa 1: Validação Dados do Imóvel
-    if (_currentStep == 0) {
-      if (_tituloController.text.isEmpty ||
-          _precoController.text.isEmpty ||
-          _areaController.text.isEmpty) {
-        _showError('Preencha Título, Preço e Área para continuar');
-        return;
-      }
-      setState(() => _currentStep++);
-    }
-    // Etapa 2: Validação Localização
-    else if (_currentStep == 1) {
-      if (_provinciaController.text.isEmpty || _cidadeController.text.isEmpty) {
-        _showError('Preencha Província e Cidade para continuar');
-        return;
-      }
-      setState(() => _currentStep++);
-    }
-    // Etapa 3: Publicar Tudo
-    else if (_currentStep == 2) {
-      await _publishAll();
-    }
-  }
-
-  Future<void> _publishAll() async {
-    if (_anuncianteId == null) {
-      _showError('Erro de sessão: Anunciante não identificado.');
-      return;
-    }
-
+  Future<void> _publicar() async {
     setState(() => _isLoading = true);
 
     try {
-      // 1. Criar Imóvel e obter ID
-      final imovelId = await _createImovelAction();
+      // 1. Criar Imóvel
+      final imovelId = await _createImovel();
       print('Imóvel criado com ID: $imovelId');
 
       // 2. Criar Localização
-      await _createLocalizacaoAction(imovelId);
+      await _createLocalizacao(imovelId);
       print('Localização criada');
 
-      // 3. Upload Documento (Opcional)
-      if (_documentoImovel != null) {
-        await _uploadDocumentoAction(imovelId);
-        print('Documento enviado');
-      }
+      // 3. Upload Documento (Desabilitado temporariamente devido a constraint do banco)
+      // if (_documentoImovel != null) {
+      //   await _uploadDocumento(imovelId);
+      //   print('Documento enviado');
+      // }
 
       // 4. Criar Anúncio
-      await _createAnuncioAction(imovelId);
+      await _createAnuncio(imovelId);
       print('Anúncio criado');
 
-      _showSuccess('Propriedade publicada com sucesso! 50 créditos debitados.');
-      Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Propriedade publicada com sucesso! 50 créditos debitados.',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+        // Voltar para a tela inicial
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
     } catch (e) {
       print('Erro no fluxo de publicação: $e');
-      _showError(e.toString().replaceAll('Exception: ', ''));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
-  Future<int> _createImovelAction() async {
+  Future<int> _createImovel() async {
     var request = http.MultipartRequest(
       'POST',
       Uri.parse('http://localhost:8080/api/imovel/criar'),
     );
 
-    request.fields['titulo'] = _tituloController.text;
-    request.fields['descricao'] = _descricaoController.text;
-    request.fields['precoMzn'] = _precoController.text
+    request.fields['titulo'] = widget.titulo;
+    request.fields['descricao'] = widget.descricao;
+    request.fields['precoMzn'] = widget.preco
         .replaceAll(',', '.')
         .replaceAll(' ', '');
-    request.fields['area'] = _areaController.text
+    request.fields['area'] = widget.area
         .replaceAll(',', '.')
         .replaceAll(' ', '');
-    request.fields['finalidade'] = _finalidade;
-    request.fields['categoria'] = _categoria;
-    request.fields['idAnunciante'] = _anuncianteId.toString();
+    request.fields['finalidade'] = widget.finalidade;
+    request.fields['categoria'] = widget.categoria;
+    request.fields['idAnunciante'] = widget.anuncianteId.toString();
 
-    if (_imagemPrincipal != null) {
+    if (widget.imagemPrincipal != null) {
       request.files.add(
         http.MultipartFile.fromBytes(
           'imagemPrincipal',
-          await _imagemPrincipal!.readAsBytes(),
-          filename: _imagemPrincipal!.name,
+          await widget.imagemPrincipal!.readAsBytes(),
+          filename: widget.imagemPrincipal!.name,
           contentType: MediaType(
             'image',
-            _getImageExtension(_imagemPrincipal!.name),
+            _getImageExtension(widget.imagemPrincipal!.name),
           ),
         ),
       );
@@ -231,15 +972,15 @@ class _PublishPropertyState extends State<PublishProperty> {
     }
   }
 
-  Future<void> _createLocalizacaoAction(int imovelId) async {
+  Future<void> _createLocalizacao(int imovelId) async {
     final response = await http.post(
       Uri.parse('http://localhost:8080/api/localizacao/criar'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
-        'pais': _paisController.text,
-        'provincia': _provinciaController.text,
-        'cidade': _cidadeController.text,
-        'bairro': _bairroController.text,
+        'pais': widget.pais,
+        'provincia': widget.provincia,
+        'cidade': widget.cidade,
+        'bairro': widget.bairro,
         'idImovel': imovelId,
       }),
     );
@@ -250,7 +991,7 @@ class _PublishPropertyState extends State<PublishProperty> {
     }
   }
 
-  Future<void> _uploadDocumentoAction(int imovelId) async {
+  Future<void> _uploadDocumento(int imovelId) async {
     var request = http.MultipartRequest(
       'POST',
       Uri.parse('http://localhost:8080/api/documento_imovel/criar'),
@@ -280,7 +1021,7 @@ class _PublishPropertyState extends State<PublishProperty> {
     }
   }
 
-  Future<void> _createAnuncioAction(int imovelId) async {
+  Future<void> _createAnuncio(int imovelId) async {
     final response = await http.post(
       Uri.parse('http://localhost:8080/api/anuncio/criar?idImovel=$imovelId'),
     );
@@ -294,7 +1035,6 @@ class _PublishPropertyState extends State<PublishProperty> {
 
   String _getImageExtension(String filename) {
     final extension = filename.split('.').last.toLowerCase();
-    // Mapear extensões para subtipos MIME corretos
     switch (extension) {
       case 'jpg':
       case 'jpeg':
@@ -308,97 +1048,150 @@ class _PublishPropertyState extends State<PublishProperty> {
       case 'webp':
         return 'webp';
       default:
-        return 'jpeg'; // fallback
+        return 'jpeg';
     }
-  }
-
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
-    );
-  }
-
-  void _showSuccess(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.green),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.9,
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        children: [
-          // Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Publicar Propriedade',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-              IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ],
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F5F5),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'Documento (Opcional)',
+          style: TextStyle(
+            color: Colors.black87,
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
           ),
-          const SizedBox(height: 10),
-
-          // Créditos disponíveis
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.blue[50],
-              borderRadius: BorderRadius.circular(8),
-            ),
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(60),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            color: Colors.white,
             child: Row(
               children: [
-                const Icon(Icons.account_balance_wallet, color: Colors.blue),
+                Expanded(
+                  child: Container(
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.black87,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
                 const SizedBox(width: 8),
-                Text(
-                  'Créditos: ${_credits.toStringAsFixed(0)} | Custo: 50',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+                Expanded(
+                  child: Container(
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.black87,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Container(
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.black87,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 20),
-
-          // Stepper
+        ),
+      ),
+      body: Column(
+        children: [
           Expanded(
-            child: Stepper(
-              currentStep: _currentStep,
-              onStepContinue: _isLoading ? null : _submitStep,
-              onStepCancel: _currentStep > 0
-                  ? () => setState(() => _currentStep--)
-                  : null,
-              controlsBuilder: (context, details) {
-                return Row(
-                  children: [
-                    ElevatedButton(
-                      onPressed: _isLoading ? null : details.onStepContinue,
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Text(_currentStep == 2 ? 'Publicar' : 'Continuar'),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  _buildDropdown(),
+                  const SizedBox(height: 24),
+                  _buildDocumentPicker(),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.blue.shade100),
                     ),
-                    if (_currentStep > 0) ...[
-                      const SizedBox(width: 12),
-                      TextButton(
-                        onPressed: details.onStepCancel,
-                        child: const Text('Voltar'),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, color: Colors.blue.shade700),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'O documento é opcional. Você pode publicar sem ele.',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, -2),
+                ),
+              ],
+            ),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _publicar,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.black87,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text(
+                        'Publicar Propriedade',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ],
-                  ],
-                );
-              },
-              steps: [_buildStep1(), _buildStep2(), _buildStep3()],
+              ),
             ),
           ),
         ],
@@ -406,222 +1199,101 @@ class _PublishPropertyState extends State<PublishProperty> {
     );
   }
 
-  Step _buildStep1() {
-    return Step(
-      title: const Text('Dados do Imóvel'),
-      content: Column(
-        children: [
-          TextField(
-            controller: _tituloController,
-            decoration: const InputDecoration(
-              labelText: 'Título *',
-              prefixIcon: Icon(Icons.title, color: Colors.black),
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _descricaoController,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              labelText: 'Descrição',
-              prefixIcon: Icon(Icons.description, color: Colors.black),
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _precoController,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Preço (MZN) *',
-              prefixIcon: Icon(Icons.attach_money, color: Colors.black),
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _areaController,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Área (m²) *',
-              prefixIcon: Icon(Icons.square_foot, color: Colors.black),
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
-            value: _finalidade,
-            decoration: const InputDecoration(
-              labelText: 'Finalidade',
-              prefixIcon: Icon(Icons.business_center, color: Colors.black),
-              border: OutlineInputBorder(),
-            ),
-            items: ['VENDA', 'ARRENDAMENTO'].map((String value) {
-              return DropdownMenuItem<String>(value: value, child: Text(value));
-            }).toList(),
-            onChanged: (value) => setState(() => _finalidade = value!),
-          ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
-            value: _categoria,
-            decoration: const InputDecoration(
-              labelText: 'Categoria',
-              prefixIcon: Icon(Icons.home, color: Colors.black),
-              border: OutlineInputBorder(),
-            ),
-            items: ['Casa', 'Apartamento', 'Terreno', 'Comercial'].map((
-              String value,
-            ) {
-              return DropdownMenuItem<String>(value: value, child: Text(value));
-            }).toList(),
-            onChanged: (value) => setState(() => _categoria = value!),
-          ),
-          const SizedBox(height: 12),
-          ElevatedButton.icon(
-            onPressed: _pickImage,
-            icon: const Icon(Icons.image, color: Colors.black),
-            label: Text(
-              _imagemPrincipal == null
-                  ? 'Adicionar Imagem'
-                  : 'Imagem Selecionada',
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.grey[200],
-              foregroundColor: Colors.black,
-            ),
-          ),
-        ],
+  Widget _buildDropdown() {
+    return DropdownButtonFormField<String>(
+      value: _tipoDocumento,
+      decoration: InputDecoration(
+        labelText: 'Tipo de Documento',
+        prefixIcon: const Icon(Icons.description, color: Colors.black87),
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.black87, width: 2),
+        ),
       ),
-      isActive: _currentStep >= 0,
-      state: _currentStep > 0 ? StepState.complete : StepState.indexed,
+      items:
+          [
+            'ESCRITURA',
+            'CERTIDAO_DE_REGISTO_PREDIAL',
+            'LICENCA_DE_CONSTRUCAO',
+            'PLANTA_CROQUIS',
+            'BI',
+            'NUIT',
+            'DUAT',
+            'OUTRO',
+          ].map((String value) {
+            String displayName = value;
+            if (value == 'CERTIDAO_DE_REGISTO_PREDIAL') {
+              displayName = 'Certidão de Registo Predial';
+            } else if (value == 'LICENCA_DE_CONSTRUCAO') {
+              displayName = 'Licença de Construção';
+            } else if (value == 'PLANTA_CROQUIS') {
+              displayName = 'Planta/Croquis';
+            }
+            return DropdownMenuItem<String>(
+              value: value,
+              child: Text(displayName),
+            );
+          }).toList(),
+      onChanged: (value) => setState(() => _tipoDocumento = value!),
     );
   }
 
-  Step _buildStep2() {
-    return Step(
-      title: const Text('Localização'),
-      content: Column(
-        children: [
-          TextField(
-            controller: _paisController,
-            decoration: const InputDecoration(
-              labelText: 'País',
-              prefixIcon: Icon(Icons.public, color: Colors.black),
-              border: OutlineInputBorder(),
-            ),
+  Widget _buildDocumentPicker() {
+    return InkWell(
+      onTap: _pickDocument,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: _documentoImovel != null
+                ? Colors.green.shade300
+                : Colors.grey.shade300,
+            width: 2,
+            style: BorderStyle.solid,
           ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _provinciaController,
-            decoration: const InputDecoration(
-              labelText: 'Província *',
-              prefixIcon: Icon(Icons.location_city, color: Colors.black),
-              border: OutlineInputBorder(),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              _documentoImovel != null ? Icons.check_circle : Icons.upload_file,
+              size: 48,
+              color: _documentoImovel != null ? Colors.green : Colors.grey,
             ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _cidadeController,
-            decoration: const InputDecoration(
-              labelText: 'Cidade *',
-              prefixIcon: Icon(Icons.location_on, color: Colors.black),
-              border: OutlineInputBorder(),
+            const SizedBox(height: 12),
+            Text(
+              _documentoImovel != null
+                  ? 'Documento Selecionado'
+                  : 'Adicionar Documento',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: _documentoImovel != null ? Colors.green : Colors.black87,
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _bairroController,
-            decoration: const InputDecoration(
-              labelText: 'Bairro',
-              prefixIcon: Icon(Icons.place, color: Colors.black),
-              border: OutlineInputBorder(),
-            ),
-          ),
-        ],
+            if (_documentoImovel != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                _documentoImovel!.name,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ],
+        ),
       ),
-      isActive: _currentStep >= 1,
-      state: _currentStep > 1 ? StepState.complete : StepState.indexed,
     );
-  }
-
-  Step _buildStep3() {
-    return Step(
-      title: const Text('Documento (Opcional)'),
-      content: Column(
-        children: [
-          DropdownButtonFormField<String>(
-            value: _tipoDocumento,
-            decoration: const InputDecoration(
-              labelText: 'Tipo de Documento',
-              prefixIcon: Icon(Icons.description, color: Colors.black),
-              border: OutlineInputBorder(),
-            ),
-            items:
-                [
-                  'ESCRITURA',
-                  'CERTIDAO_DE_REGISTO_PREDIAL',
-                  'LICENCA_DE_CONSTRUCAO',
-                  'PLANTA_CROQUIS',
-                  'BI',
-                  'NUIT',
-                  'DUAT',
-                  'OUTRO',
-                ].map((String value) {
-                  // Exibir nome amigável mas enviar valor do enum
-                  String displayName = value;
-                  if (value == 'CERTIDAO_DE_REGISTO_PREDIAL') {
-                    displayName = 'Certidão de Registo Predial';
-                  } else if (value == 'LICENCA_DE_CONSTRUCAO') {
-                    displayName = 'Licença de Construção';
-                  } else if (value == 'PLANTA_CROQUIS') {
-                    displayName = 'Planta/Croquis';
-                  } else {
-                    displayName = value;
-                  }
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(displayName),
-                  );
-                }).toList(),
-            onChanged: (value) => setState(() => _tipoDocumento = value!),
-          ),
-          const SizedBox(height: 12),
-          ElevatedButton.icon(
-            onPressed: _pickDocument,
-            icon: const Icon(Icons.upload_file, color: Colors.black),
-            label: Text(
-              _documentoImovel == null
-                  ? 'Adicionar Documento'
-                  : 'Documento Selecionado',
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.grey[200],
-              foregroundColor: Colors.black,
-            ),
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'O documento é opcional. Clique em "Publicar" para finalizar.',
-            style: TextStyle(fontSize: 12, color: Colors.grey),
-          ),
-        ],
-      ),
-      isActive: _currentStep >= 2,
-      state: StepState.indexed,
-    );
-  }
-
-  @override
-  void dispose() {
-    _tituloController.dispose();
-    _descricaoController.dispose();
-    _precoController.dispose();
-    _areaController.dispose();
-    _paisController.dispose();
-    _provinciaController.dispose();
-    _cidadeController.dispose();
-    _bairroController.dispose();
-    super.dispose();
   }
 }

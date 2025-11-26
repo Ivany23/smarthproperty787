@@ -2,7 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/constants/colors.dart';
 import 'package:flutter_application_1/core/shared/widgets/publish_property.dart';
-import 'package:flutter_application_1/features/chat/presentation/views/chat.dart';
+import 'package:flutter_application_1/features/home/presentation/views/minhas_marcacoes_screen.dart';
 import 'package:flutter_application_1/features/favorites/presentation/views/favorite.dart';
 import 'package:flutter_application_1/features/home/presentation/views/offers.dart';
 import 'package:flutter_application_1/features/profile/presentation/views/profile.dart';
@@ -17,7 +17,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   List<Widget> homeScreens = const [
     OffersView(),
-    ChatView(),
+    MinhasMarcacoesScreen(),
     FavoriteView(),
     ProfileView(),
   ];
@@ -63,7 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _buildNavItem(CupertinoIcons.house_alt, "Ofertas", 0),
-              _buildNavItem(CupertinoIcons.chat_bubble, "Mensagem", 1),
+              _buildNavItem(CupertinoIcons.calendar, "Marcações", 1),
               const SizedBox(width: 40), // Space for FAB
               _buildNavItem(CupertinoIcons.heart, "Favoritos", 2),
               _buildNavItem(CupertinoIcons.person, "Meu Perfil", 3),
